@@ -27,12 +27,18 @@ enum class CpuFault : std::uint8_t {
     IllegalInstruction,
     MalformedInstruction,
     UnsupportedInstruction,
+    MisalignedLoad,
+    MisalignedStore,
+    UnmappedLoad,
+    UnmappedStore,
+    ReadOnlyStore,
 };
 
 struct FaultInfo {
     CpuFault code{CpuFault::None};
     std::uint32_t pc{};
     std::uint32_t instruction{};
+    std::optional<std::uint32_t> data_address{};
 };
 
 enum class StepResult : std::uint8_t {
@@ -43,7 +49,7 @@ enum class StepResult : std::uint8_t {
 
 class CpuCore {
 public:
-    explicit CpuCore(const Bus& bus);
+    explicit CpuCore(Bus& bus);
 
     void reset();
     void tick();
@@ -58,15 +64,17 @@ public:
     [[nodiscard]] const FaultInfo& fault_info() const { return fault_info_; }
 
 private:
-    void enter_fault(CpuFault code);
+    void enter_fault(CpuFault code, std::optional<std::uint32_t> data_address = std::nullopt);
 
-    const Bus& bus_;
+    Bus& bus_;
     RegisterFile registers_{};
     std::uint32_t pc_{};
     std::uint32_t instruction_register_{};
     std::uint32_t operand_lhs_{};
     std::uint32_t operand_rhs_{};
     std::uint32_t alu_result_{};
+    std::uint32_t store_data_{};
+    std::uint32_t memory_data_{};
     Microstate microstate_{Microstate::Fetch};
     std::optional<DecodedInstruction> decoded_instruction_{};
     std::optional<ControlSignals> control_signals_{};

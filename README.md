@@ -4,7 +4,7 @@ Mini Computer is a hardware-oriented software model of a compact, custom 32-bit 
 
 ## Project status
 
-Architecture v0.1 now has a tested first datapath: `NOP`, `ADD`, `SUB`, and `ADDI` execute through ROM, the bus, decoder/control signals, register file, ALU, and a multi-cycle CPU controller. RAM, loads/stores, control flow, peripherals, and the assembler remain unimplemented.
+Architecture v0.1 now has a tested arithmetic and data-memory path. Arithmetic/logical instructions, immediate generation, `LUI`, `LW`, `SW`, `HALT`, ROM, RAM, and system-bus reads/writes execute through the multi-cycle CPU controller. Branches, jumps, the assembler, peripherals, and STM32 integration remain unimplemented.
 
 ## Design choices
 

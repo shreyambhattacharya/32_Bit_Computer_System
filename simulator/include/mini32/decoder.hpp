@@ -20,6 +20,7 @@ struct DecodedInstruction {
     std::uint8_t rs1{};
     std::uint8_t rs2{};
     std::uint16_t imm16{};
+    std::uint32_t imm26{};
 };
 
 struct DecodeResult {
@@ -31,6 +32,20 @@ struct DecodeResult {
 
 enum class WritebackSource : std::uint8_t {
     Alu,
+    Memory,
+};
+
+enum class ImmediateKind : std::uint8_t {
+    None,
+    Signed16,
+    ZeroExtended16,
+    Upper16,
+};
+
+enum class MemoryOperation : std::uint8_t {
+    None,
+    Load,
+    Store,
 };
 
 struct ControlSignals {
@@ -38,13 +53,17 @@ struct ControlSignals {
     bool alu_src_immediate{};
     AluOperation alu_operation{AluOperation::Add};
     WritebackSource writeback_source{WritebackSource::Alu};
+    ImmediateKind immediate_kind{ImmediateKind::None};
+    MemoryOperation memory_operation{MemoryOperation::None};
+    bool halt{};
 };
 
 class Decoder {
 public:
     [[nodiscard]] static DecodeResult decode(std::uint32_t instruction);
     [[nodiscard]] static std::optional<ControlSignals> control_for(Opcode opcode);
-    [[nodiscard]] static std::uint32_t sign_extend_16(std::uint16_t immediate);
+    [[nodiscard]] static std::uint32_t immediate_value(ImmediateKind kind,
+                                                        std::uint16_t immediate);
 };
 
 }  // namespace mini32

@@ -3,6 +3,7 @@
 
 #include "mini32/bus.hpp"
 #include "mini32/rom.hpp"
+#include "mini32/ram.hpp"
 #include "test_support.hpp"
 
 int main() {
@@ -19,8 +20,15 @@ int main() {
     CHECK(rom.read32(2U).fault == mini32::RomFault::Misaligned);
     CHECK(rom.read32(0x10000U).fault == mini32::RomFault::OutOfRange);
 
-    const mini32::Bus bus(rom);
+    mini32::Ram ram;
+    mini32::Bus bus(rom, ram);
     CHECK(bus.read32(0U).data == 0x12345678U);
+    CHECK(bus.write32(mini32::Ram::kBaseAddress, 0xA1B2C3D4U).ok());
+    CHECK(bus.read32(mini32::Ram::kBaseAddress).data == 0xA1B2C3D4U);
+    CHECK(bus.write32(0U, 1U).fault == mini32::BusFault::ReadOnly);
     CHECK(bus.read32(2U).fault == mini32::BusFault::Misaligned);
+    CHECK(bus.write32(mini32::Ram::kBaseAddress + 2U, 1U).fault == mini32::BusFault::Misaligned);
     CHECK(bus.read32(0x10000U).fault == mini32::BusFault::Unmapped);
+    CHECK(bus.write32(0x30000000U, 1U).fault == mini32::BusFault::Unmapped);
+    CHECK(bus.read32(0U).data != bus.read32(mini32::Ram::kBaseAddress).data);
 }

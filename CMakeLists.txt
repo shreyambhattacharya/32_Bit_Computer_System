@@ -13,6 +13,7 @@ add_library(mini32_core
     simulator/src/bus.cpp
     simulator/src/cpu_core.cpp
     simulator/src/decoder.cpp
+    simulator/src/ram.cpp
     simulator/src/register_file.cpp
     simulator/src/rom.cpp
 )
@@ -42,5 +43,7 @@ if(BUILD_TESTING)
     add_mini32_test(test_register_file)
     add_mini32_test(test_decoder)
     add_mini32_test(test_rom_bus)
+    add_mini32_test(test_ram)
     add_mini32_test(test_cpu_arithmetic)
+    add_mini32_test(test_cpu_memory)
 endif()

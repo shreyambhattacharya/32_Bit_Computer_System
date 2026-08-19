@@ -1,10 +1,11 @@
-#include <array>
 #include <cstdint>
+#include <initializer_list>
 
 #include "mini32/bus.hpp"
 #include "mini32/cpu_core.hpp"
 #include "mini32/isa.hpp"
 #include "mini32/rom.hpp"
+#include "mini32/ram.hpp"
 #include "test_support.hpp"
 
 namespace {
@@ -37,7 +38,8 @@ void load_program(mini32::Rom& rom, const std::initializer_list<std::uint32_t> p
 int main() {
     mini32::Rom rom;
     load_program(rom, {encode_i(mini32::Opcode::Addi, 1U, 0U, 7U)});
-    const mini32::Bus bus(rom);
+    mini32::Ram ram;
+    mini32::Bus bus(rom, ram);
     mini32::CpuCore cpu(bus);
 
     CHECK(cpu.microstate() == mini32::Microstate::Fetch);
@@ -106,11 +108,15 @@ int main() {
     CHECK(malformed_cpu.faulted());
 
     rom = mini32::Rom{};
+    rom.load32(0xFFFCU, encode_i(mini32::Opcode::Addi, 1U, 0U, 9U));
     mini32::CpuCore unmapped_cpu(bus);
-    for (std::uint32_t instruction = 0U; instruction < 16384U; ++instruction) {
+    for (std::uint32_t instruction = 0U; instruction < 16383U; ++instruction) {
         CHECK(unmapped_cpu.step() == mini32::StepResult::Retired);
     }
+    CHECK(unmapped_cpu.step() == mini32::StepResult::Retired);
     CHECK(unmapped_cpu.program_counter() == 0x00010000U);
+    CHECK(unmapped_cpu.registers().read(1U) == 9U);
     CHECK(unmapped_cpu.step() == mini32::StepResult::Faulted);
     CHECK(unmapped_cpu.fault_info().code == mini32::CpuFault::UnmappedInstructionFetch);
+    CHECK(unmapped_cpu.fault_info().instruction == 0U);
 }
