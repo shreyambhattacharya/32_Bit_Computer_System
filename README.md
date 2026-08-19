@@ -4,7 +4,7 @@ Mini Computer is a hardware-oriented software model of a compact, custom 32-bit 
 
 ## Project status
 
-Architecture v0.1 is specified. No CPU behavior is implemented yet: the next milestone is a tested arithmetic instruction path (`NOP`, `ADD`, `SUB`, and `ADDI`) through fetch, decode, execute, and writeback.
+Architecture v0.1 now has a tested first datapath: `NOP`, `ADD`, `SUB`, and `ADDI` execute through ROM, the bus, decoder/control signals, register file, ALU, and a multi-cycle CPU controller. RAM, loads/stores, control flow, peripherals, and the assembler remain unimplemented.
 
 ## Design choices
 
@@ -26,7 +26,7 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-There are intentionally no executable targets or tests in this architecture-only checkpoint.
+CTest runs independent ALU, register-file, decoder, ROM/bus, and CPU arithmetic tests.
 
 ## Layout
 
