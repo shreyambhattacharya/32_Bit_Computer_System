@@ -4,7 +4,7 @@ Mini Computer is a hardware-oriented software model of a compact, custom 32-bit 
 
 ## Project status
 
-The complete Mini32 v0.1 machine-code ISA executes through the tested multi-cycle CPU controller, including arithmetic, logical operations, ROM/RAM access, branches, jumps, calls, returns, and `HALT`. The assembler, disassembler, MMIO peripherals, and STM32 integration remain unimplemented.
+The complete Mini32 v0.1 CPU, Python assembler, Python disassembler, and sample assembly programs are implemented and tested together. MMIO peripherals, STM32 integration, and an interactive monitor/debugger remain unimplemented.
 
 ## Design choices
 
@@ -27,6 +27,7 @@ ctest --test-dir build --output-on-failure
 ```
 
 CTest runs ALU, register-file, decoder, ROM/bus, RAM, arithmetic CPU, data-memory CPU, and control-flow CPU tests.
+Python 3 is required for the assembler/disassembler tests and generated sample ROM images.
 
 ## Layout
 
