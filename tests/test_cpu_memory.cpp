@@ -180,4 +180,9 @@ int main() {
                      encode_i(mini32::Opcode::Lui, 1U, 0U, 0x3000U),
                      encode_i(mini32::Opcode::Lw, 2U, 1U, 0U),
                  }, mini32::CpuFault::UnmappedLoad, 0x30000000U, 4U);
+    verify_fault({
+                     encode_i(mini32::Opcode::Lui, 1U, 0U, 0x3000U),
+                     encode_i(mini32::Opcode::Addi, 2U, 0U, 1U),
+                     encode_s(2U, 1U, 0U),
+                 }, mini32::CpuFault::UnmappedStore, 0x30000000U, 8U);
 }

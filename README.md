@@ -4,7 +4,7 @@ Mini Computer is a hardware-oriented software model of a compact, custom 32-bit 
 
 ## Project status
 
-Architecture v0.1 now has a tested arithmetic and data-memory path. Arithmetic/logical instructions, immediate generation, `LUI`, `LW`, `SW`, `HALT`, ROM, RAM, and system-bus reads/writes execute through the multi-cycle CPU controller. Branches, jumps, the assembler, peripherals, and STM32 integration remain unimplemented.
+The complete Mini32 v0.1 machine-code ISA executes through the tested multi-cycle CPU controller, including arithmetic, logical operations, ROM/RAM access, branches, jumps, calls, returns, and `HALT`. The assembler, disassembler, MMIO peripherals, and STM32 integration remain unimplemented.
 
 ## Design choices
 
@@ -26,7 +26,7 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-CTest runs independent ALU, register-file, decoder, ROM/bus, and CPU arithmetic tests.
+CTest runs ALU, register-file, decoder, ROM/bus, RAM, arithmetic CPU, data-memory CPU, and control-flow CPU tests.
 
 ## Layout
 

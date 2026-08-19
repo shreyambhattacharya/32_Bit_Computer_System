@@ -3,6 +3,15 @@
 #include <cstdint>
 
 namespace mini32 {
+namespace {
+
+bool signed_less_than(const std::uint32_t lhs, const std::uint32_t rhs) {
+    const bool lhs_negative = (lhs & 0x80000000U) != 0U;
+    const bool rhs_negative = (rhs & 0x80000000U) != 0U;
+    return lhs_negative != rhs_negative ? lhs_negative : lhs < rhs;
+}
+
+}  // namespace
 
 std::uint32_t Alu::execute(
     const AluOperation operation, const std::uint32_t lhs, const std::uint32_t rhs) {
@@ -18,7 +27,7 @@ std::uint32_t Alu::execute(
     case AluOperation::Xor:
         return lhs ^ rhs;
     case AluOperation::Slt:
-        return static_cast<std::int32_t>(lhs) < static_cast<std::int32_t>(rhs) ? 1U : 0U;
+        return signed_less_than(lhs, rhs) ? 1U : 0U;
     case AluOperation::ShiftLeft:
         return lhs << (rhs & 0x1FU);
     case AluOperation::ShiftRight:

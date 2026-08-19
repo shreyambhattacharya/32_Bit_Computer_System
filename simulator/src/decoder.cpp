@@ -176,11 +176,43 @@ std::optional<ControlSignals> Decoder::control_for(const Opcode opcode) {
         return ControlSignals{.alu_src_immediate = true, .alu_operation = AluOperation::Add,
                               .immediate_kind = ImmediateKind::Signed16,
                               .memory_operation = MemoryOperation::Store};
+    case Opcode::Beq:
+        return ControlSignals{.control_flow = ControlFlowKind::ConditionalBranch,
+                              .branch_predicate = BranchPredicate::Equal};
+    case Opcode::Bne:
+        return ControlSignals{.control_flow = ControlFlowKind::ConditionalBranch,
+                              .branch_predicate = BranchPredicate::NotEqual};
+    case Opcode::Blt:
+        return ControlSignals{.control_flow = ControlFlowKind::ConditionalBranch,
+                              .branch_predicate = BranchPredicate::SignedLessThan};
+    case Opcode::Bge:
+        return ControlSignals{.control_flow = ControlFlowKind::ConditionalBranch,
+                              .branch_predicate = BranchPredicate::SignedGreaterEqual};
+    case Opcode::J:
+        return ControlSignals{.control_flow = ControlFlowKind::RelativeJump};
+    case Opcode::Jal:
+        return ControlSignals{.reg_write = true, .writeback_source = WritebackSource::PcPlus4,
+                              .register_destination = RegisterDestination::ReturnAddress,
+                              .control_flow = ControlFlowKind::RelativeJump};
+    case Opcode::Jr:
+        return ControlSignals{.control_flow = ControlFlowKind::RegisterJump};
     case Opcode::Halt:
         return ControlSignals{.halt = true};
     default:
         return std::nullopt;
     }
+}
+
+std::uint32_t Decoder::branch_displacement(const std::uint16_t immediate) {
+    return immediate_value(ImmediateKind::Signed16, immediate) * 4U;
+}
+
+std::uint32_t Decoder::jump_displacement(const std::uint32_t immediate) {
+    const std::uint32_t encoded = immediate & 0x03FFFFFFU;
+    const std::uint32_t sign_extended = (encoded & 0x02000000U) == 0U
+                                            ? encoded
+                                            : (encoded | 0xFC000000U);
+    return sign_extended * 4U;
 }
 
 std::uint32_t Decoder::immediate_value(const ImmediateKind kind, const std::uint16_t immediate) {

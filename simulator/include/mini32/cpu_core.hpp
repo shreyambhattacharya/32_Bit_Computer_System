@@ -24,6 +24,7 @@ enum class CpuFault : std::uint8_t {
     None,
     MisalignedInstructionFetch,
     UnmappedInstructionFetch,
+    NonExecutableInstructionFetch,
     IllegalInstruction,
     MalformedInstruction,
     UnsupportedInstruction,
@@ -65,6 +66,8 @@ public:
 
 private:
     void enter_fault(CpuFault code, std::optional<std::uint32_t> data_address = std::nullopt);
+    [[nodiscard]] bool branch_taken() const;
+    void retire_to(std::uint32_t next_pc);
 
     Bus& bus_;
     RegisterFile registers_{};
@@ -75,6 +78,8 @@ private:
     std::uint32_t alu_result_{};
     std::uint32_t store_data_{};
     std::uint32_t memory_data_{};
+    std::uint32_t pc_plus_4_{};
+    std::uint32_t next_pc_{};
     Microstate microstate_{Microstate::Fetch};
     std::optional<DecodedInstruction> decoded_instruction_{};
     std::optional<ControlSignals> control_signals_{};

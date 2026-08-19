@@ -33,6 +33,27 @@ struct DecodeResult {
 enum class WritebackSource : std::uint8_t {
     Alu,
     Memory,
+    PcPlus4,
+};
+
+enum class RegisterDestination : std::uint8_t {
+    DecodedRd,
+    ReturnAddress,
+};
+
+enum class ControlFlowKind : std::uint8_t {
+    Sequential,
+    ConditionalBranch,
+    RelativeJump,
+    RegisterJump,
+};
+
+enum class BranchPredicate : std::uint8_t {
+    None,
+    Equal,
+    NotEqual,
+    SignedLessThan,
+    SignedGreaterEqual,
 };
 
 enum class ImmediateKind : std::uint8_t {
@@ -53,8 +74,11 @@ struct ControlSignals {
     bool alu_src_immediate{};
     AluOperation alu_operation{AluOperation::Add};
     WritebackSource writeback_source{WritebackSource::Alu};
+    RegisterDestination register_destination{RegisterDestination::DecodedRd};
     ImmediateKind immediate_kind{ImmediateKind::None};
     MemoryOperation memory_operation{MemoryOperation::None};
+    ControlFlowKind control_flow{ControlFlowKind::Sequential};
+    BranchPredicate branch_predicate{BranchPredicate::None};
     bool halt{};
 };
 
@@ -64,6 +88,8 @@ public:
     [[nodiscard]] static std::optional<ControlSignals> control_for(Opcode opcode);
     [[nodiscard]] static std::uint32_t immediate_value(ImmediateKind kind,
                                                         std::uint16_t immediate);
+    [[nodiscard]] static std::uint32_t branch_displacement(std::uint16_t immediate);
+    [[nodiscard]] static std::uint32_t jump_displacement(std::uint32_t immediate);
 };
 
 }  // namespace mini32

@@ -103,4 +103,27 @@ int main() {
     CHECK(mini32::Decoder::immediate_value(mini32::ImmediateKind::Upper16, 0x1000U) == 0x10000000U);
     CHECK(mini32::Decoder::immediate_value(mini32::ImmediateKind::Upper16, 0x2000U) == 0x20000000U);
     CHECK(mini32::Decoder::immediate_value(mini32::ImmediateKind::Upper16, 0xFFFFU) == 0xFFFF0000U);
+    CHECK(mini32::Decoder::branch_displacement(0x0001U) == 4U);
+    CHECK(mini32::Decoder::branch_displacement(0xFFFFU) == 0xFFFFFFFCU);
+    CHECK(mini32::Decoder::jump_displacement(0x00000000U) == 0U);
+    CHECK(mini32::Decoder::jump_displacement(0x00000001U) == 4U);
+    CHECK(mini32::Decoder::jump_displacement(0x01FFFFFFU) == 0x07FFFFFCU);
+    CHECK(mini32::Decoder::jump_displacement(0x03FFFFFFU) == 0xFFFFFFFCU);
+    CHECK(mini32::Decoder::jump_displacement(0x03FFFFFEU) == 0xFFFFFFF8U);
+    CHECK(mini32::Decoder::jump_displacement(0x02000000U) == 0xF8000000U);
+
+    for (const mini32::Opcode opcode : {mini32::Opcode::Nop, mini32::Opcode::Add,
+                                        mini32::Opcode::Sub, mini32::Opcode::And,
+                                        mini32::Opcode::Or, mini32::Opcode::Xor,
+                                        mini32::Opcode::Slt, mini32::Opcode::Shl,
+                                        mini32::Opcode::Shr, mini32::Opcode::Addi,
+                                        mini32::Opcode::Andi, mini32::Opcode::Ori,
+                                        mini32::Opcode::Xori, mini32::Opcode::Lui,
+                                        mini32::Opcode::Lw, mini32::Opcode::Sw,
+                                        mini32::Opcode::Beq, mini32::Opcode::Bne,
+                                        mini32::Opcode::Blt, mini32::Opcode::Bge,
+                                        mini32::Opcode::J, mini32::Opcode::Jal,
+                                        mini32::Opcode::Jr, mini32::Opcode::Halt}) {
+        CHECK(mini32::Decoder::control_for(opcode).has_value());
+    }
 }

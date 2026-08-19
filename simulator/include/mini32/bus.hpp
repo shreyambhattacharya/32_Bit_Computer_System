@@ -12,6 +12,7 @@ enum class BusFault : std::uint8_t {
     Misaligned,
     Unmapped,
     ReadOnly,
+    NonExecutable,
 };
 
 struct BusWriteResult {
@@ -32,6 +33,7 @@ public:
     Bus(const Rom& rom, Ram& ram) : rom_(rom), ram_(ram) {}
 
     [[nodiscard]] BusReadResult read32(std::uint32_t address) const;
+    [[nodiscard]] BusReadResult fetch32(std::uint32_t address) const;
     [[nodiscard]] BusWriteResult write32(std::uint32_t address, std::uint32_t value);
 
 private:
