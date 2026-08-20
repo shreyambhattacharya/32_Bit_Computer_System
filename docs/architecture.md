@@ -53,7 +53,9 @@ flowchart TB
     CPU[cpu_core.sv] <--> BUS[system_bus.sv]
     BUS <--> ROM[rom.sv\n64 KiB read/execute]
     BUS <--> RAM[ram.sv\n64 KiB read/write]
-    BUS --> MMIO[Reserved UART / Timer / GPIO / Debug / STM32\nfuture RTL; faults today]
+    BUS --> UART[UART MMIO\nTX-only]
+    BUS --> DEBUG[Debug MMIO\nVALUE register]
+    BUS --> FUTURE[Reserved Timer / GPIO / STM32\nfault today]
 ```
 
 `mini32_system.sv` instantiates this hierarchy without moving datapath logic into the top level. The bus permits one outstanding request: it captures CPU request fields, issues the synchronous ROM/RAM access, and raises `ready` for one response cycle. The full 32-bit address is checked for alignment before the 14-bit memory word index is selected, preventing low-bit truncation from aliasing malformed accesses. ROM occupies `0x00000000–0x0000FFFF`; RAM occupies `0x10000000–0x1000FFFF`.

@@ -11,7 +11,10 @@ module system_bus #(
     input  logic [31:0]             request_wdata,
     output logic                    response_ready,
     output logic [31:0]             response_rdata,
-    output mini32_pkg::bus_fault_t  response_fault
+    output mini32_pkg::bus_fault_t  response_fault,
+    output logic                    uart_tx_valid,
+    output logic [7:0]              uart_tx_data,
+    output logic [31:0]             debug_value
 );
     import mini32_pkg::*;
 
@@ -19,10 +22,11 @@ module system_bus #(
     bus_state_t state;
     bus_access_t pending_access;
     logic [31:0] pending_addr, pending_wdata;
-    logic pending_rom, pending_ram;
+    logic pending_rom, pending_ram, pending_uart, pending_debug;
     bus_fault_t pending_fault;
     logic rom_read_enable, ram_read_enable, ram_write_enable;
-    logic [31:0] rom_read_data, ram_read_data;
+    logic uart_read_enable, uart_write_enable, debug_read_enable, debug_write_enable;
+    logic [31:0] rom_read_data, ram_read_data, uart_read_data, debug_read_data;
     logic pending_in_reserved_mmio;
 
     rom #(.INIT_FILE(ROM_INIT_FILE)) rom_instance (
@@ -32,15 +36,25 @@ module system_bus #(
         .clk(clk), .read_enable(ram_read_enable), .write_enable(ram_write_enable),
         .word_address(pending_addr[15:2]), .write_data(pending_wdata), .read_data(ram_read_data)
     );
+    uart_mmio uart_instance (
+        .clk(clk), .reset(reset), .read_enable(uart_read_enable), .write_enable(uart_write_enable),
+        .register_offset(pending_addr[3:0]), .write_data(pending_wdata), .read_data(uart_read_data),
+        .tx_valid(uart_tx_valid), .tx_data(uart_tx_data)
+    );
+    debug_mmio debug_instance (
+        .clk(clk), .reset(reset), .read_enable(debug_read_enable), .write_enable(debug_write_enable),
+        .register_offset(pending_addr[3:0]), .write_data(pending_wdata), .read_data(debug_read_data),
+        .debug_value(debug_value)
+    );
 
     always_comb begin
-        pending_in_reserved_mmio = ((pending_addr >= UART_BASE) && (pending_addr <= UART_LAST)) ||
-                                   ((pending_addr >= TIMER_BASE) && (pending_addr <= TIMER_LAST)) ||
+        pending_in_reserved_mmio = ((pending_addr >= TIMER_BASE) && (pending_addr <= TIMER_LAST)) ||
                                    ((pending_addr >= GPIO_BASE) && (pending_addr <= GPIO_LAST)) ||
-                                   ((pending_addr >= DEBUG_BASE) && (pending_addr <= DEBUG_LAST)) ||
                                    ((pending_addr >= STM32_BASE) && (pending_addr <= STM32_LAST));
         pending_rom = 1'b0;
         pending_ram = 1'b0;
+        pending_uart = 1'b0;
+        pending_debug = 1'b0;
         pending_fault = BUS_FAULT_NONE;
         // Alignment is intentionally first, before range truncation/decode.
         if (pending_addr[1:0] != 2'b00) begin
@@ -50,6 +64,12 @@ module system_bus #(
             if (pending_access == BUS_WRITE) pending_fault = BUS_FAULT_READ_ONLY;
         end else if ((pending_addr >= RAM_BASE) && (pending_addr <= RAM_LAST)) begin
             pending_ram = 1'b1;
+            if (pending_access == BUS_FETCH) pending_fault = BUS_FAULT_NON_EXECUTABLE;
+        end else if ((pending_addr >= UART_BASE) && (pending_addr <= UART_LAST)) begin
+            pending_uart = 1'b1;
+            if (pending_access == BUS_FETCH) pending_fault = BUS_FAULT_NON_EXECUTABLE;
+        end else if ((pending_addr >= DEBUG_BASE) && (pending_addr <= DEBUG_LAST)) begin
+            pending_debug = 1'b1;
             if (pending_access == BUS_FETCH) pending_fault = BUS_FAULT_NON_EXECUTABLE;
         end else if ((pending_access == BUS_FETCH) && pending_in_reserved_mmio) begin
             pending_fault = BUS_FAULT_NON_EXECUTABLE;
@@ -65,6 +85,14 @@ module system_bus #(
                           (pending_access == BUS_READ);
         ram_write_enable = (state == BUS_MEMORY) && pending_ram && (pending_fault == BUS_FAULT_NONE) &&
                            (pending_access == BUS_WRITE);
+        uart_read_enable = (state == BUS_MEMORY) && pending_uart && (pending_fault == BUS_FAULT_NONE) &&
+                           (pending_access == BUS_READ);
+        uart_write_enable = (state == BUS_MEMORY) && pending_uart && (pending_fault == BUS_FAULT_NONE) &&
+                            (pending_access == BUS_WRITE);
+        debug_read_enable = (state == BUS_MEMORY) && pending_debug && (pending_fault == BUS_FAULT_NONE) &&
+                            (pending_access == BUS_READ);
+        debug_write_enable = (state == BUS_MEMORY) && pending_debug && (pending_fault == BUS_FAULT_NONE) &&
+                             (pending_access == BUS_WRITE);
         response_ready = (state == BUS_RESPONSE);
         response_fault = BUS_FAULT_NONE;
         if (state == BUS_RESPONSE) response_fault = pending_fault;
@@ -72,6 +100,8 @@ module system_bus #(
         if (state == BUS_RESPONSE && pending_fault == BUS_FAULT_NONE) begin
             if (pending_rom) response_rdata = rom_read_data;
             else if (pending_ram) response_rdata = ram_read_data;
+            else if (pending_uart) response_rdata = uart_read_data;
+            else if (pending_debug) response_rdata = debug_read_data;
         end
     end
 

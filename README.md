@@ -4,7 +4,7 @@ Mini Computer is a mixed hardware/software implementation of a compact, custom 3
 
 ## Project status
 
-The complete Mini32 v0.1 C++ reference CPU, Python assembler/disassembler, UART/Debug MMIO models, and standalone simulator are implemented and tested together. The SystemVerilog RTL includes a complete vendor-independent CPU + ROM + RAM + system-bus computer. Automated differential simulation now assembles each guest program once, executes its shared image on C++ and RTL, and compares retirement PCs/instructions/next-PCs, committed register effects, stores, HALT, and architectural faults. This is simulation-based equivalence checking, not formal verification. RTL peripherals and FPGA-board deployment remain future work.
+The complete Mini32 v0.1 C++ reference CPU, Python assembler/disassembler, UART/Debug MMIO models, and standalone simulator are implemented and tested together. The SystemVerilog RTL includes a complete vendor-independent CPU + ROM + RAM + system-bus computer with synthesizable UART and Debug MMIO blocks. Automated differential simulation assembles each guest program once, executes its shared image on C++ and RTL, and compares retirement PCs/instructions/next-PCs, committed register effects, stores, HALT, faults, UART transcripts, and final Debug VALUE. This is simulation-based equivalence checking, not formal verification. GPIO/timer, the STM32 bridge, and FPGA-board deployment remain future work.
 
 ## Design choices
 
@@ -83,6 +83,7 @@ Mini32
 4. Complete — RTL foundation and multi-cycle `cpu_core.sv`.
 5. Complete — synthesizable ROM/RAM/system bus/top-level RTL and assembled-ROM execution.
 6. Complete — automated C++ golden-model ↔ RTL retirement-trace differential simulation.
-7. Next — UART and Debug MMIO RTL, then GPIO/timer RTL, STM32 bridge, and FPGA synthesis/board integration.
+7. Complete — synthesizable UART/Debug MMIO RTL and peripheral-state differential checks.
+8. Next — GPIO/timer RTL, STM32 bridge, and FPGA synthesis/board integration.
 
 The STM32 bridge remains a later physical-integration milestone. A Raspberry Pi 5 remains useful as the development and debug host, but does not replace the FPGA logic.

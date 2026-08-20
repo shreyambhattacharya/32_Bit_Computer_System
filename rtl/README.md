@@ -22,20 +22,22 @@ Generated simulator outputs stay in `rtl/build/`. The root CMake project deliber
 ```text
 cpu_core  <->  system_bus  <->  rom (64 KiB, read/execute)
                               <->  ram (64 KiB, read/write)
-                              <->  reserved future MMIO (faults today)
+                              <->  uart_mmio (TX-only)
+                              <->  debug_mmio (VALUE register)
+                              <->  reserved Timer / GPIO / STM32 windows (fault today)
 ```
 
-The bus permits one outstanding request. It captures a request, drives a synchronous memory access in the next cycle, and pulses `ready` in a response cycle. This makes a normal access take at least one cycle and prevents an asserted store request from repeating writes. Misalignment is checked before address decode. ROM allows fetch/read but faults writes; RAM allows read/write but faults fetches; reserved MMIO fetches are non-executable and its data accesses are unmapped until peripherals exist.
+The bus permits one outstanding request. It captures a request, drives a synchronous memory or MMIO access in the next cycle, and pulses `ready` in a response cycle. This makes a normal access take at least one cycle and prevents an asserted store request from repeating writes. Misalignment is checked before address decode. ROM allows fetch/read but faults writes; RAM allows read/write but faults fetches; UART and Debug permit data reads/writes but fault fetches; Timer, GPIO, and STM32 remain unmapped.
 
 ROM and RAM are 16,384 x 32-bit arrays, covering the full 64 KiB architectural regions without aliasing. Reads are synchronous. RAM writes are synchronous and RAM deliberately has no reset or power-up initialization; guest programs must write data before reading it. For v0.1 aligned 32-bit accesses, each array word has Mini32 little-endian external semantics.
 
-`rom.sv` accepts `INIT_FILE` for simulation/FPGA initialization. `bin_to_mem.py` converts raw little-endian assembler output to the word-per-line `$readmemh` format (`78 56 34 12` becomes `12345678`). `make test` assembles `memory_roundtrip.asm`, `rtl_system_smoke.asm`, and `rtl_system_fault.asm` into `build/generated/` before simulation. Generated files remain outside version control.
+`rom.sv` accepts `INIT_FILE` for simulation/FPGA initialization. `bin_to_mem.py` converts raw little-endian assembler output to the word-per-line `$readmemh` format (`78 56 34 12` becomes `12345678`). `make test` assembles system images including `hello_uart.asm` and `peripheral_readback.asm` into `build/generated/` before simulation. Generated files remain outside version control.
 
 ## Differential verification
 
 `cpu_core.sv` additionally exposes a non-architectural retirement interface: `retire_pc`, `retire_instruction`, `retire_next_pc`, committed `retire_reg_write`/`retire_rd`/`retire_value`, and successful-store `retire_mem_write`/`retire_mem_addr`/`retire_mem_value`. A write to `r0`, or one that leaves a register's value unchanged, is not reported as an architectural register modification. `mini32_system.sv` also exposes fault PC, instruction, and optional data address.
 
-`tb_differential_trace.sv` is a generic ROM-parameterized runner that emits prefixed JSONL retirement and final records. The repository-level runner assembles exactly one `.bin`, supplies it to `mini32_ref_trace`, converts that same binary to `.memh`, runs the RTL trace testbench, and compares the traces without comparing cycles or internal state:
+`tb_differential_trace.sv` is a generic ROM-parameterized runner that emits prefixed JSONL retirement and final records. Final records include a lowercase-hex UART TX transcript and Debug VALUE. The comparator accepts either hex case from simulators and normalizes it before comparison. The repository-level runner assembles exactly one `.bin`, supplies it to `mini32_ref_trace`, converts that same binary to `.memh`, runs the RTL trace testbench, and compares the traces without comparing cycles or internal state:
 
 ```sh
 python verification/differential.py --suite
@@ -57,7 +59,7 @@ Artifacts are retained under ignored `verification/build/` directories. The suit
 | `Ram` | `memory/ram.sv` | 64 KiB synchronous data storage. |
 | `Bus` | `bus/system_bus.sv` | One-request synchronous address decoder/interconnect. |
 | — | `top/mini32_system.sv` | CPU + bus + ROM + RAM synthesizable computer. |
-| `Uart` | future `peripherals/uart.sv` | UART register block. |
-| `DebugDevice` | future `peripherals/debug_device.sv` | Debug register block. |
+| `Uart` | `peripherals/uart_mmio.sv` | TX-only UART register block and event output. |
+| `DebugDevice` | `peripherals/debug_mmio.sv` | Persistent Debug VALUE register. |
 
-Only the `peripherals/` hierarchy remains intentionally unimplemented. The CPU unit test still supplies behavioral memory/bus behavior to isolate core tests; system tests exercise the real RTL hierarchy and assembled ROM images.
+UART DATA writes pulse `uart_tx_valid` with the low byte and STATUS reads return `TX_READY = 1`. Debug VALUE is reset-zero, read/write at offset zero, and propagated through `mini32_system` as `debug_value`; other documented offsets read zero and ignore writes. The CPU unit test still supplies behavioral memory/bus behavior to isolate core tests; system tests exercise the real RTL hierarchy and assembled ROM images.

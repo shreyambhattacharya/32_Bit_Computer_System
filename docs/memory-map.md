@@ -17,14 +17,14 @@ The 32-bit byte-addressed address space is decoded by one system bus. All v0.1 g
 
 | Device | Offset | Register | Initial behavior |
 | --- | ---: | --- | --- |
-| UART | `0x00` | `DATA` | Write low byte to the host TX sink; read returns `0` until RX is implemented. |
-| UART | `0x04` | `STATUS` | Bit 0 (`TX_READY`) is 1 in the host console model. |
+| UART | `0x00` | `DATA` | Write low byte to a one-cycle RTL `tx_valid` event; read returns `0` until RX is implemented. |
+| UART | `0x04` | `STATUS` | Bit 0 (`TX_READY`) is always `1`. |
 | UART | `0x08` | `CONTROL` | Read `0`; writes are accepted with no effect. |
 | UART | `0x0C` | reserved | Read `0`; writes are accepted with no effect. |
 | Debug | `0x00` | `VALUE` | Reset-zero host-visible 32-bit read/write value for tests and demos. |
 | Debug | `0x04` | `COMMAND` | Read `0`; writes are accepted with no effect. |
 | Debug | `0x08`, `0x0C` | reserved | Read `0`; writes are accepted with no effect. |
 
-The initial UART is TX-only: `TX_READY` is always one, there is no FIFO or backpressure, and it has no RX, interrupts, stdin connection, or asynchronous host behavior.
+The initial UART is TX-only: `TX_READY` is always one, each DATA write yields exactly one `tx_valid` event, and there is no FIFO, backpressure, RX, interrupts, stdin connection, or asynchronous host behavior. The synthesizable Debug VALUE output is propagated from the RTL top level for test and board-integration observation.
 
 Timer, GPIO, and STM32 register behavior is intentionally not implemented yet. Their address ranges continue to fault until a later milestone defines each device. The STM32 bridge must eventually be reached only through normal `LW`/`SW`, never through a special CPU instruction.

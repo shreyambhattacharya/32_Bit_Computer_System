@@ -21,7 +21,10 @@ module mini32_system #(
     output logic [31:0]             retire_value,
     output logic                    retire_mem_write,
     output logic [31:0]             retire_mem_addr,
-    output logic [31:0]             retire_mem_value
+    output logic [31:0]             retire_mem_value,
+    output logic                    uart_tx_valid,
+    output logic [7:0]              uart_tx_data,
+    output logic [31:0]             debug_value
 );
     import mini32_pkg::*;
     logic bus_valid, bus_ready;
@@ -42,6 +45,7 @@ module mini32_system #(
     system_bus #(.ROM_INIT_FILE(ROM_INIT_FILE)) system_bus_instance (
         .clk(clk), .reset(reset), .request_valid(bus_valid), .request_access(bus_access),
         .request_addr(bus_addr), .request_wdata(bus_wdata), .response_ready(bus_ready),
-        .response_rdata(bus_rdata), .response_fault(bus_fault)
+        .response_rdata(bus_rdata), .response_fault(bus_fault), .uart_tx_valid(uart_tx_valid),
+        .uart_tx_data(uart_tx_data), .debug_value(debug_value)
     );
 endmodule

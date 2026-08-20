@@ -42,6 +42,13 @@ std::string hex32(const std::uint32_t value) {
     return output.str();
 }
 
+std::string hex_bytes(const std::vector<std::uint8_t>& bytes) {
+    std::ostringstream output;
+    output << std::nouppercase << std::hex << std::setfill('0');
+    for (const std::uint8_t byte : bytes) output << std::setw(2) << static_cast<unsigned>(byte);
+    return output.str();
+}
+
 const char* fault_name(const mini32::CpuFault fault) {
     using mini32::CpuFault;
     switch (fault) {
@@ -104,7 +111,8 @@ int main(const int argc, char* argv[]) {
     mini32::Rom rom;
     rom.load_bytes(0U, *image);
     mini32::Ram ram;
-    mini32::Uart uart;
+    std::vector<std::uint8_t> uart_bytes;
+    mini32::Uart uart([&uart_bytes](const std::uint8_t byte) { uart_bytes.push_back(byte); });
     mini32::DebugDevice debug;
     mini32::Bus bus(rom, ram, uart, debug);
     mini32::CpuCore cpu(bus);
@@ -155,7 +163,8 @@ int main(const int argc, char* argv[]) {
     }
     std::cout << "{\"type\":\"final\",\"status\":\"" << (cpu.halted() ? "halted" : "faulted")
               << "\",\"pc\":\"" << hex32(cpu.program_counter()) << "\",\"retired\":"
-              << cpu.retired_instructions();
+              << cpu.retired_instructions() << ",\"uart_tx\":\"" << hex_bytes(uart_bytes)
+              << "\",\"debug_value\":\"" << hex32(debug.value()) << "\"";
     if (cpu.faulted()) {
         const mini32::FaultInfo& fault = cpu.fault_info();
         std::cout << ",\"fault\":\"" << fault_name(fault.code) << "\",\"fault_pc\":\""
