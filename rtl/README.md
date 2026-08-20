@@ -31,6 +31,18 @@ ROM and RAM are 16,384 x 32-bit arrays, covering the full 64 KiB architectural r
 
 `rom.sv` accepts `INIT_FILE` for simulation/FPGA initialization. `bin_to_mem.py` converts raw little-endian assembler output to the word-per-line `$readmemh` format (`78 56 34 12` becomes `12345678`). `make test` assembles `memory_roundtrip.asm`, `rtl_system_smoke.asm`, and `rtl_system_fault.asm` into `build/generated/` before simulation. Generated files remain outside version control.
 
+## Differential verification
+
+`cpu_core.sv` additionally exposes a non-architectural retirement interface: `retire_pc`, `retire_instruction`, `retire_next_pc`, committed `retire_reg_write`/`retire_rd`/`retire_value`, and successful-store `retire_mem_write`/`retire_mem_addr`/`retire_mem_value`. A write to `r0`, or one that leaves a register's value unchanged, is not reported as an architectural register modification. `mini32_system.sv` also exposes fault PC, instruction, and optional data address.
+
+`tb_differential_trace.sv` is a generic ROM-parameterized runner that emits prefixed JSONL retirement and final records. The repository-level runner assembles exactly one `.bin`, supplies it to `mini32_ref_trace`, converts that same binary to `.memh`, runs the RTL trace testbench, and compares the traces without comparing cycles or internal state:
+
+```sh
+python verification/differential.py --suite
+```
+
+Artifacts are retained under ignored `verification/build/` directories. The suite checks instruction stream, next PC, committed register effects, stores, halt, and faults; it deliberately does not compare cycles, bus latency, microstates, or private datapath signals.
+
 ## Current modules
 
 | C++ reference | RTL | Role |

@@ -1,7 +1,7 @@
 module tb_register_file;
     logic clk = 1'b0, reset;
-    logic [4:0] rs1_addr, rs2_addr, write_addr;
-    logic [31:0] rs1_data, rs2_data, write_data;
+    logic [4:0] rs1_addr, rs2_addr, observe_addr, write_addr;
+    logic [31:0] rs1_data, rs2_data, observe_data, write_data;
     logic write_enable;
     integer failures = 0;
 
@@ -19,7 +19,7 @@ module tb_register_file;
     endtask
 
     initial begin
-        reset = 1'b1; write_enable = 1'b0; rs1_addr = 5'd1; rs2_addr = 5'd31;
+        reset = 1'b1; write_enable = 1'b0; rs1_addr = 5'd1; rs2_addr = 5'd31; observe_addr = 5'd0;
         write_addr = '0; write_data = '0;
         @(posedge clk); #1;
         check(rs1_data == 32'd0 && rs2_data == 32'd0, "reset clears writable registers");
@@ -28,6 +28,7 @@ module tb_register_file;
         check(rs1_data == 32'h1234_5678, "write/read r1");
         write_register(5'd31, 32'hfeed_beef);
         check(rs2_data == 32'hfeed_beef, "write/read r31");
+        observe_addr = 5'd31; #1; check(observe_data == 32'hfeed_beef, "observation read port");
         write_register(5'd1, 32'h0bad_f00d);
         check(rs1_data == 32'h0bad_f00d, "overwrite r1");
         rs1_addr = 5'd1; rs2_addr = 5'd31; #1;

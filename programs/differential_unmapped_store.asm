@@ -1,0 +1,4 @@
+LUI r1, 0x3000
+ADDI r2, r0, 1
+SW r2, 0(r1)
+HALT

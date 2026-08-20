@@ -15,8 +15,10 @@ module tb_cpu_core;
     logic fault_address_valid;
     logic [31:0] pc;
     logic retire_valid, retire_reg_write;
-    logic [31:0] retire_pc, retire_instruction, retire_value;
+    logic [31:0] retire_pc, retire_instruction, retire_next_pc, retire_value;
     logic [4:0] retire_rd;
+    logic retire_mem_write;
+    logic [31:0] retire_mem_addr, retire_mem_value;
 
     logic [31:0] instruction_memory [0:255];
     logic [31:0] data_memory [0:255];
@@ -30,6 +32,9 @@ module tb_cpu_core;
     logic saw_fetch_stall, saw_memory_stall;
     bus_access_t stalled_access;
     logic [31:0] stalled_addr, stalled_wdata;
+    logic saw_r0_retirement, saw_branch_retirement, saw_jump_retirement, saw_jal_retirement;
+    logic saw_jr_retirement, saw_store_retirement, saw_halt_retirement;
+    logic checking_retirement_metadata;
 
     cpu_core dut (.*);
     always #5 clk = ~clk;
@@ -68,8 +73,50 @@ module tb_cpu_core;
             stalled_request_seen <= 1'b0;
             saw_fetch_stall <= 1'b0;
             saw_memory_stall <= 1'b0;
+            saw_r0_retirement <= 1'b0;
+            saw_branch_retirement <= 1'b0;
+            saw_jump_retirement <= 1'b0;
+            saw_jal_retirement <= 1'b0;
+            saw_jr_retirement <= 1'b0;
+            saw_store_retirement <= 1'b0;
+            saw_halt_retirement <= 1'b0;
         end else begin
             if (retire_valid) retire_count <= retire_count + 1;
+            if (checking_retirement_metadata && retire_valid && retire_pc == 32'h0000_0000) begin
+                check(!retire_reg_write && retire_next_pc == 32'h0000_0004 && !retire_mem_write,
+                      "r0 write retirement metadata is wrong");
+                saw_r0_retirement <= 1'b1;
+            end
+            if (checking_retirement_metadata && retire_valid && retire_pc == 32'h0000_0008) begin
+                check(retire_next_pc == 32'h0000_0010 && !retire_reg_write && !retire_mem_write,
+                      "branch retirement next PC is wrong");
+                saw_branch_retirement <= 1'b1;
+            end
+            if (checking_retirement_metadata && retire_valid && retire_pc == 32'h0000_0014) begin
+                check(retire_next_pc == 32'h0000_0018 && !retire_reg_write && !retire_mem_write,
+                      "J retirement next PC is wrong");
+                saw_jump_retirement <= 1'b1;
+            end
+            if (checking_retirement_metadata && retire_valid && retire_pc == 32'h0000_0010 && retire_instruction[31:26] == OP_JAL) begin
+                check(retire_next_pc == 32'h0000_0024 && retire_reg_write && retire_rd == 5'd31 &&
+                      retire_value == 32'h0000_0014, "JAL retirement metadata is wrong");
+                saw_jal_retirement <= 1'b1;
+            end
+            if (checking_retirement_metadata && retire_valid && retire_pc == 32'h0000_0028) begin
+                check(retire_next_pc == 32'h0000_0014 && !retire_reg_write && !retire_mem_write,
+                      "JR retirement next PC is wrong");
+                saw_jr_retirement <= 1'b1;
+            end
+            if (checking_retirement_metadata && retire_valid && retire_pc == 32'h0000_001C) begin
+                check(retire_mem_write && retire_mem_addr == 32'h1000_0000 && retire_mem_value == 32'd3 &&
+                      retire_next_pc == 32'h0000_0020, "SW retirement metadata is wrong");
+                saw_store_retirement <= 1'b1;
+            end
+            if (checking_retirement_metadata && retire_valid && retire_instruction == {OP_HALT, 26'h0}) begin
+                check(retire_next_pc == retire_pc + 32'd4 && !retire_reg_write && !retire_mem_write,
+                      "HALT retirement metadata is wrong");
+                saw_halt_retirement <= 1'b1;
+            end
             if (bus_valid && !bus_ready) begin
                 if (bus_access == BUS_FETCH) saw_fetch_stall <= 1'b1;
                 else saw_memory_stall <= 1'b1;
@@ -112,6 +159,7 @@ module tb_cpu_core;
     endtask
 
     task automatic start_case(input integer waits);
+        checking_retirement_metadata = 1'b0;
         configured_waits = waits;
         injected_fetch_fault = BUS_FAULT_NONE;
         injected_data_fault = BUS_FAULT_NONE;
@@ -299,6 +347,33 @@ module tb_cpu_core;
         check(!faulted && !halted && pc == 32'h0000_0000 && retire_count != 0, "negative J did not loop at PC zero");
     endtask
 
+    task automatic test_retirement_metadata;
+        clear_memories();
+        instruction_memory[0] = encode_i(OP_ADDI, 5'd0, 5'd0, 16'd1);
+        instruction_memory[1] = encode_i(OP_ADDI, 5'd1, 5'd0, 16'd3);
+        instruction_memory[2] = encode_b(OP_BEQ, 5'd1, 5'd1, 16'd1);
+        instruction_memory[3] = encode_i(OP_ADDI, 5'd1, 5'd0, 16'd99);
+        instruction_memory[4] = encode_j(OP_JAL, 26'd4);
+        instruction_memory[5] = encode_j(OP_J, 26'd0);
+        instruction_memory[6] = encode_i(OP_LUI, 5'd10, 5'd0, 16'h1000);
+        instruction_memory[7] = encode_s(5'd1, 5'd10, 16'd0);
+        instruction_memory[8] = {OP_HALT, 26'h0};
+        instruction_memory[9] = encode_i(OP_ADDI, 5'd2, 5'd0, 16'd7);
+        instruction_memory[10] = encode_jr(5'd31);
+        start_case(0); checking_retirement_metadata = 1'b1; run_to_stop(500, "retirement-metadata program did not stop");
+        check(halted && !faulted && saw_r0_retirement && saw_branch_retirement && saw_jump_retirement &&
+              saw_jal_retirement && saw_jr_retirement && saw_store_retirement && saw_halt_retirement,
+              "retirement metadata coverage is incomplete");
+
+        clear_memories();
+        instruction_memory[0] = encode_i(OP_ADDI, 5'd1, 5'd0, 16'd1);
+        instruction_memory[1] = encode_s(5'd1, 5'd0, 16'd0);
+        start_case(0); injected_data_fault = BUS_FAULT_READ_ONLY; run_to_stop(200, "faulting store did not stop");
+        repeat (2) @(posedge clk);
+        check(faulted && fault_code == CPU_FAULT_READ_ONLY_STORE && retire_count == 1,
+              "faulting store incorrectly retired");
+    endtask
+
     initial begin
         reset = 1'b0; active = 1'b0; configured_waits = 0; injected_fetch_fault = BUS_FAULT_NONE;
         injected_data_fault = BUS_FAULT_NONE;
@@ -310,6 +385,7 @@ module tb_cpu_core;
         test_call_return();
         test_misaligned_jr();
         test_negative_jump();
+        test_retirement_metadata();
         test_faults();
         if (failures != 0) $fatal(1, "tb_cpu_core: %0d failures", failures);
         $display("tb_cpu_core passed");

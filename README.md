@@ -4,7 +4,7 @@ Mini Computer is a mixed hardware/software implementation of a compact, custom 3
 
 ## Project status
 
-The complete Mini32 v0.1 C++ reference CPU, Python assembler/disassembler, UART/Debug MMIO models, and standalone simulator are implemented and tested together. The SystemVerilog RTL now includes a complete vendor-independent, synthesizable CPU + ROM + RAM + system-bus computer, booted in simulation from real Python-assembled ROM images. RTL peripherals and FPGA-board deployment remain future work.
+The complete Mini32 v0.1 C++ reference CPU, Python assembler/disassembler, UART/Debug MMIO models, and standalone simulator are implemented and tested together. The SystemVerilog RTL includes a complete vendor-independent CPU + ROM + RAM + system-bus computer. Automated differential simulation now assembles each guest program once, executes its shared image on C++ and RTL, and compares retirement PCs/instructions/next-PCs, committed register effects, stores, HALT, and architectural faults. This is simulation-based equivalence checking, not formal verification. RTL peripherals and FPGA-board deployment remain future work.
 
 ## Design choices
 
@@ -49,7 +49,7 @@ UART lives at `0x20000000–0x2000000F`. Writing `DATA` (`+0x00`) transmits its 
 
 `rtl/` contains vendor-independent synthesizable hardware modules and self-checking module testbenches. It has an independent RTL-oriented Makefile workflow and is not compiled by CMake. The future FPGA hosts this digital logic; the Raspberry Pi remains a development, simulation, programming, terminal, and debug companion rather than a replacement for it.
 
-The RTL image flow is `programs/*.asm → assembler → raw .bin → rtl/tools/bin_to_mem.py → .memh → rom.sv → mini32_system`. Run `cd rtl; make test` to assemble the shared system programs and execute them through the real RTL ROM, bus, RAM, and CPU hierarchy.
+The RTL image flow is `programs/*.asm → assembler → raw .bin → rtl/tools/bin_to_mem.py → .memh → rom.sv → mini32_system`. Run `cd rtl; make test` for RTL benches, or `python verification/differential.py --suite` after the CMake build for C++ ↔ RTL retirement-trace comparison.
 
 ### Toolchain
 
@@ -82,7 +82,7 @@ Mini32
 3. Complete — C++ UART/Debug MMIO and standalone simulator.
 4. Complete — RTL foundation and multi-cycle `cpu_core.sv`.
 5. Complete — synthesizable ROM/RAM/system bus/top-level RTL and assembled-ROM execution.
-6. Next — automated C++ golden-model ↔ RTL differential verification through retirement traces.
-7. Future — UART/GPIO/timer RTL, STM32 bridge, and FPGA synthesis/board integration.
+6. Complete — automated C++ golden-model ↔ RTL retirement-trace differential simulation.
+7. Next — UART and Debug MMIO RTL, then GPIO/timer RTL, STM32 bridge, and FPGA synthesis/board integration.
 
 The STM32 bridge remains a later physical-integration milestone. A Raspberry Pi 5 remains useful as the development and debug host, but does not replace the FPGA logic.

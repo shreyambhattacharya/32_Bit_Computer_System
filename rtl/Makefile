@@ -19,7 +19,7 @@ RTL_SOURCES := $(CORE_SOURCES) $(MEMORY_SOURCES) $(BUS_SOURCES) $(TOP_SOURCES)
 TESTBENCHES := tb_alu tb_register_file tb_immediate_generator tb_decoder tb_control_unit tb_cpu_core tb_rom tb_ram tb_system_bus tb_mini32_system
 SYSTEM_IMAGES := $(GENERATED_DIR)/memory_roundtrip.memh $(GENERATED_DIR)/rtl_system_smoke.memh $(GENERATED_DIR)/rtl_system_fault.memh
 
-.PHONY: lint test clean test_converter $(TESTBENCHES)
+.PHONY: lint test clean test_converter differential_trace $(TESTBENCHES)
 
 lint:
 	$(VERILATOR) --lint-only -Wall --top-module mini32_system $(RTL_SOURCES)
@@ -28,6 +28,13 @@ test: test_converter $(TESTBENCHES)
 
 test_converter:
 	$(PYTHON) -m unittest discover -s tests -p "test_*.py"
+
+# Build the generic runner; the external Python harness supplies ROM_INIT_FILE
+# at elaboration time and consumes only its MINI32_TRACE JSONL records.
+differential_trace: $(BUILD_DIR)/tb_differential_trace
+
+$(BUILD_DIR)/tb_differential_trace: $(RTL_SOURCES) tb/tb_differential_trace.sv | $(BUILD_DIR)
+	$(IVERILOG) -g2012 -s tb_differential_trace -o $@ $(RTL_SOURCES) tb/tb_differential_trace.sv
 
 $(TESTBENCHES): %: $(BUILD_DIR)/%
 	$(VVP) $<

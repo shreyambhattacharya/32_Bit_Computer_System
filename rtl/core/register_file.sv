@@ -3,8 +3,10 @@ module register_file (
     input  logic        reset,
     input  logic [4:0]  rs1_addr,
     input  logic [4:0]  rs2_addr,
+    input  logic [4:0]  observe_addr,
     output logic [31:0] rs1_data,
     output logic [31:0] rs2_data,
+    output logic [31:0] observe_data,
     input  logic        write_enable,
     input  logic [4:0]  write_addr,
     input  logic [31:0] write_data
@@ -27,5 +29,6 @@ module register_file (
     always_comb begin
         rs1_data = (rs1_addr == 5'd0) ? 32'h0000_0000 : registers[rs1_addr];
         rs2_data = (rs2_addr == 5'd0) ? 32'h0000_0000 : registers[rs2_addr];
+        observe_data = (observe_addr == 5'd0) ? 32'h0000_0000 : registers[observe_addr];
     end
 endmodule

@@ -37,6 +37,14 @@ else()
     target_compile_options(mini32_sim PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
+add_executable(mini32_ref_trace simulator/app/ref_trace.cpp)
+target_link_libraries(mini32_ref_trace PRIVATE mini32_core)
+if(MSVC)
+    target_compile_options(mini32_ref_trace PRIVATE /W4 /permissive-)
+else()
+    target_compile_options(mini32_ref_trace PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
 set(MINI32_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
 set(MINI32_ARITHMETIC_LOOP_BIN "${MINI32_GENERATED_DIR}/arithmetic_loop.bin")
 set(MINI32_HELLO_UART_BIN "${MINI32_GENERATED_DIR}/hello_uart.bin")
@@ -114,4 +122,14 @@ if(BUILD_TESTING)
                      "${MINI32_HELLO_UART_BIN}"
                      "${MINI32_INFINITE_LOOP_BIN}"
                      "${MINI32_FAULT_ILLEGAL_BIN}")
+
+    find_program(MINI32_IVERILOG_EXECUTABLE NAMES iverilog)
+    find_program(MINI32_VVP_EXECUTABLE NAMES vvp)
+    if(MINI32_IVERILOG_EXECUTABLE AND MINI32_VVP_EXECUTABLE)
+        add_test(NAME test_cpp_rtl_differential
+                 COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/verification/differential.py"
+                         --suite --reference-trace $<TARGET_FILE:mini32_ref_trace>)
+        set_tests_properties(test_cpp_rtl_differential PROPERTIES
+            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+    endif()
 endif()

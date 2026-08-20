@@ -19,9 +19,13 @@ module cpu_core (
     output logic                    retire_valid,
     output logic [31:0]             retire_pc,
     output logic [31:0]             retire_instruction,
+    output logic [31:0]             retire_next_pc,
     output logic                    retire_reg_write,
     output logic [4:0]              retire_rd,
-    output logic [31:0]             retire_value
+    output logic [31:0]             retire_value,
+    output logic                    retire_mem_write,
+    output logic [31:0]             retire_mem_addr,
+    output logic [31:0]             retire_mem_value
 );
     import mini32_pkg::*;
 
@@ -47,7 +51,7 @@ module cpu_core (
     memory_operation_t control_memory_operation;
     control_flow_t control_flow;
     branch_predicate_t control_branch_predicate;
-    logic [31:0] rs1_data, rs2_data, immediate_value, alu_result;
+    logic [31:0] rs1_data, rs2_data, writeback_current_value, immediate_value, alu_result;
     logic [31:0] writeback_value;
     logic [4:0] writeback_destination;
     logic register_write_enable;
@@ -69,7 +73,8 @@ module cpu_core (
     );
     register_file register_file_instance (
         .clk(clk), .reset(reset), .rs1_addr(decoded_rs1), .rs2_addr(decoded_rs2),
-        .rs1_data(rs1_data), .rs2_data(rs2_data), .write_enable(register_write_enable),
+        .observe_addr(writeback_destination), .rs1_data(rs1_data), .rs2_data(rs2_data),
+        .observe_data(writeback_current_value), .write_enable(register_write_enable),
         .write_addr(writeback_destination), .write_data(writeback_value)
     );
     immediate_generator immediate_generator_instance (
@@ -146,14 +151,22 @@ module cpu_core (
         endcase
     endfunction
 
+    // These signals describe committed architectural effects, not attempted
+    // writes. In particular, writes to immutable r0 do not set reg_write.
     task automatic record_retirement(input logic writes_register, input logic [4:0] destination,
-                                     input logic [31:0] value);
+                                     input logic [31:0] value, input logic [31:0] committed_next_pc,
+                                     input logic writes_memory, input logic [31:0] memory_address,
+                                     input logic [31:0] memory_value);
         retire_valid <= 1'b1;
         retire_pc <= pc;
         retire_instruction <= instruction_register;
-        retire_reg_write <= writes_register;
+        retire_next_pc <= committed_next_pc;
+        retire_reg_write <= writes_register && (destination != 5'd0) && (value != writeback_current_value);
         retire_rd <= destination;
         retire_value <= value;
+        retire_mem_write <= writes_memory;
+        retire_mem_addr <= memory_address;
+        retire_mem_value <= memory_value;
     endtask
 
     task automatic enter_fault(input cpu_fault_t error, input logic [31:0] error_instruction,
@@ -185,12 +198,17 @@ module cpu_core (
             retire_valid <= 1'b0;
             retire_pc <= 32'h0000_0000;
             retire_instruction <= 32'h0000_0000;
+            retire_next_pc <= 32'h0000_0000;
             retire_reg_write <= 1'b0;
             retire_rd <= 5'h00;
             retire_value <= 32'h0000_0000;
+            retire_mem_write <= 1'b0;
+            retire_mem_addr <= 32'h0000_0000;
+            retire_mem_value <= 32'h0000_0000;
         end else begin
             retire_valid <= 1'b0;
             retire_reg_write <= 1'b0;
+            retire_mem_write <= 1'b0;
             case (state)
                 CPU_STATE_FETCH: begin
                     if (bus_ready) begin
@@ -220,20 +238,25 @@ module cpu_core (
                     alu_result_latch <= alu_result;
                     if (control_flow == FLOW_CONDITIONAL_BRANCH) begin
                         pc <= branch_taken ? (pc + 32'd4 + branch_displacement) : (pc + 32'd4);
-                        record_retirement(1'b0, 5'h00, 32'h0000_0000);
+                        record_retirement(1'b0, 5'h00, 32'h0000_0000,
+                                          branch_taken ? (pc + 32'd4 + branch_displacement) : (pc + 32'd4),
+                                          1'b0, 32'h0000_0000, 32'h0000_0000);
                         state <= CPU_STATE_FETCH;
                     end else if (control_flow == FLOW_RELATIVE_JUMP) begin
                         next_pc_latch <= pc + 32'd4 + jump_displacement;
                         if (!control_reg_write) begin
                             pc <= pc + 32'd4 + jump_displacement;
-                            record_retirement(1'b0, 5'h00, 32'h0000_0000);
+                            record_retirement(1'b0, 5'h00, 32'h0000_0000,
+                                              pc + 32'd4 + jump_displacement,
+                                              1'b0, 32'h0000_0000, 32'h0000_0000);
                             state <= CPU_STATE_FETCH;
                         end else begin
                             state <= CPU_STATE_WRITEBACK;
                         end
                     end else if (control_flow == FLOW_REGISTER_JUMP) begin
                         pc <= operand_lhs_latch;
-                        record_retirement(1'b0, 5'h00, 32'h0000_0000);
+                        record_retirement(1'b0, 5'h00, 32'h0000_0000, operand_lhs_latch,
+                                          1'b0, 32'h0000_0000, 32'h0000_0000);
                         state <= CPU_STATE_FETCH;
                     end else if (control_memory_operation != MEM_NONE) begin
                         state <= CPU_STATE_MEMORY;
@@ -254,14 +277,16 @@ module cpu_core (
                             state <= CPU_STATE_WRITEBACK;
                         end else begin
                             pc <= next_pc_latch;
-                            record_retirement(1'b0, 5'h00, 32'h0000_0000);
+                            record_retirement(1'b0, 5'h00, 32'h0000_0000, next_pc_latch,
+                                              1'b1, alu_result_latch, store_data_latch);
                             state <= CPU_STATE_FETCH;
                         end
                     end
                 end
                 CPU_STATE_WRITEBACK: begin
                     pc <= next_pc_latch;
-                    record_retirement(control_reg_write, writeback_destination, writeback_value);
+                    record_retirement(control_reg_write, writeback_destination, writeback_value, next_pc_latch,
+                                      1'b0, 32'h0000_0000, 32'h0000_0000);
                     state <= control_halt ? CPU_STATE_HALTED : CPU_STATE_FETCH;
                 end
                 CPU_STATE_HALTED, CPU_STATE_FAULT: begin
