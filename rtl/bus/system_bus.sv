@@ -1,0 +1,100 @@
+// One-outstanding-transaction Mini32 memory bus. A request is captured in
+// IDLE, issued to synchronous memory in MEMORY, then completed in RESPONSE.
+module system_bus #(
+    parameter ROM_INIT_FILE = ""
+) (
+    input  logic                    clk,
+    input  logic                    reset,
+    input  logic                    request_valid,
+    input  mini32_pkg::bus_access_t request_access,
+    input  logic [31:0]             request_addr,
+    input  logic [31:0]             request_wdata,
+    output logic                    response_ready,
+    output logic [31:0]             response_rdata,
+    output mini32_pkg::bus_fault_t  response_fault
+);
+    import mini32_pkg::*;
+
+    typedef enum logic [1:0] { BUS_IDLE, BUS_MEMORY, BUS_RESPONSE } bus_state_t;
+    bus_state_t state;
+    bus_access_t pending_access;
+    logic [31:0] pending_addr, pending_wdata;
+    logic pending_rom, pending_ram;
+    bus_fault_t pending_fault;
+    logic rom_read_enable, ram_read_enable, ram_write_enable;
+    logic [31:0] rom_read_data, ram_read_data;
+    logic pending_in_reserved_mmio;
+
+    rom #(.INIT_FILE(ROM_INIT_FILE)) rom_instance (
+        .clk(clk), .read_enable(rom_read_enable), .word_address(pending_addr[15:2]), .read_data(rom_read_data)
+    );
+    ram ram_instance (
+        .clk(clk), .read_enable(ram_read_enable), .write_enable(ram_write_enable),
+        .word_address(pending_addr[15:2]), .write_data(pending_wdata), .read_data(ram_read_data)
+    );
+
+    always_comb begin
+        pending_in_reserved_mmio = ((pending_addr >= UART_BASE) && (pending_addr <= UART_LAST)) ||
+                                   ((pending_addr >= TIMER_BASE) && (pending_addr <= TIMER_LAST)) ||
+                                   ((pending_addr >= GPIO_BASE) && (pending_addr <= GPIO_LAST)) ||
+                                   ((pending_addr >= DEBUG_BASE) && (pending_addr <= DEBUG_LAST)) ||
+                                   ((pending_addr >= STM32_BASE) && (pending_addr <= STM32_LAST));
+        pending_rom = 1'b0;
+        pending_ram = 1'b0;
+        pending_fault = BUS_FAULT_NONE;
+        // Alignment is intentionally first, before range truncation/decode.
+        if (pending_addr[1:0] != 2'b00) begin
+            pending_fault = BUS_FAULT_MISALIGNED;
+        end else if ((pending_addr >= ROM_BASE) && (pending_addr <= ROM_LAST)) begin
+            pending_rom = 1'b1;
+            if (pending_access == BUS_WRITE) pending_fault = BUS_FAULT_READ_ONLY;
+        end else if ((pending_addr >= RAM_BASE) && (pending_addr <= RAM_LAST)) begin
+            pending_ram = 1'b1;
+            if (pending_access == BUS_FETCH) pending_fault = BUS_FAULT_NON_EXECUTABLE;
+        end else if ((pending_access == BUS_FETCH) && pending_in_reserved_mmio) begin
+            pending_fault = BUS_FAULT_NON_EXECUTABLE;
+        end else begin
+            pending_fault = BUS_FAULT_UNMAPPED;
+        end
+    end
+
+    always_comb begin
+        rom_read_enable = (state == BUS_MEMORY) && pending_rom && (pending_fault == BUS_FAULT_NONE) &&
+                          (pending_access != BUS_WRITE);
+        ram_read_enable = (state == BUS_MEMORY) && pending_ram && (pending_fault == BUS_FAULT_NONE) &&
+                          (pending_access == BUS_READ);
+        ram_write_enable = (state == BUS_MEMORY) && pending_ram && (pending_fault == BUS_FAULT_NONE) &&
+                           (pending_access == BUS_WRITE);
+        response_ready = (state == BUS_RESPONSE);
+        response_fault = BUS_FAULT_NONE;
+        if (state == BUS_RESPONSE) response_fault = pending_fault;
+        response_rdata = 32'h0000_0000;
+        if (state == BUS_RESPONSE && pending_fault == BUS_FAULT_NONE) begin
+            if (pending_rom) response_rdata = rom_read_data;
+            else if (pending_ram) response_rdata = ram_read_data;
+        end
+    end
+
+    always_ff @(posedge clk) begin
+        if (reset) begin
+            state <= BUS_IDLE;
+            pending_access <= BUS_FETCH;
+            pending_addr <= 32'h0000_0000;
+            pending_wdata <= 32'h0000_0000;
+        end else begin
+            case (state)
+                BUS_IDLE: begin
+                    if (request_valid) begin
+                        pending_access <= request_access;
+                        pending_addr <= request_addr;
+                        pending_wdata <= request_wdata;
+                        state <= BUS_MEMORY;
+                    end
+                end
+                BUS_MEMORY: state <= BUS_RESPONSE;
+                BUS_RESPONSE: state <= BUS_IDLE;
+                default: state <= BUS_IDLE;
+            endcase
+        end
+    end
+endmodule

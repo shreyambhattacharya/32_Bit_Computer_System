@@ -1,5 +1,28 @@
 package mini32_pkg;
 
+    // Architectural v0.1 address map. Storage modules receive a 14-bit word
+    // index only after system_bus has performed these full-address checks.
+    localparam logic [31:0] ROM_BASE       = 32'h0000_0000;
+    localparam logic [31:0] ROM_SIZE_BYTES = 32'h0001_0000;
+    localparam logic [31:0] ROM_LAST       = ROM_BASE + ROM_SIZE_BYTES - 32'd1;
+    localparam integer ROM_WORD_COUNT = 16384;
+
+    localparam logic [31:0] RAM_BASE       = 32'h1000_0000;
+    localparam logic [31:0] RAM_SIZE_BYTES = 32'h0001_0000;
+    localparam logic [31:0] RAM_LAST       = RAM_BASE + RAM_SIZE_BYTES - 32'd1;
+    localparam integer RAM_WORD_COUNT = 16384;
+
+    localparam logic [31:0] UART_BASE       = 32'h2000_0000;
+    localparam logic [31:0] UART_LAST       = 32'h2000_000F;
+    localparam logic [31:0] TIMER_BASE      = 32'h2000_0100;
+    localparam logic [31:0] TIMER_LAST      = 32'h2000_010F;
+    localparam logic [31:0] GPIO_BASE       = 32'h2000_0200;
+    localparam logic [31:0] GPIO_LAST       = 32'h2000_020F;
+    localparam logic [31:0] DEBUG_BASE      = 32'h2000_0300;
+    localparam logic [31:0] DEBUG_LAST      = 32'h2000_030F;
+    localparam logic [31:0] STM32_BASE      = 32'h2000_0400;
+    localparam logic [31:0] STM32_LAST      = 32'h2000_04FF;
+
     // Keep raw opcode bits representable so the decoder can identify unallocated values.
     typedef logic [5:0] opcode_t;
     localparam opcode_t OP_NOP  = 6'h00;
