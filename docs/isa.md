@@ -52,7 +52,7 @@ The duplicated `imm16` entries above mean the contiguous field `[15:0]`; they ar
 | `16` | `JR rs1` | JR | `PC = rs1` |
 | `17` | `HALT` | R | stop the CPU after the instruction retires |
 
-Unallocated opcodes are illegal and fault deterministically. `MUL`, byte accesses, interrupts, and system instructions are deliberately unallocated in v0.1.
+`NOP` and `HALT` each have exactly one legal encoding: their opcode in bits `[31:26]` and all remaining bits `[25:0]` clear. Unallocated opcodes are illegal and fault deterministically. `MUL`, byte accesses, interrupts, and system instructions are deliberately unallocated in v0.1.
 
 ## Immediates, control flow, and addresses
 

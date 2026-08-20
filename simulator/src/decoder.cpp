@@ -77,7 +77,8 @@ DecodeResult Decoder::decode(const std::uint32_t instruction) {
     }
 
     const auto opcode = static_cast<Opcode>(raw_opcode);
-    if (opcode == Opcode::Nop && instruction != 0U) {
+    if ((opcode == Opcode::Nop || opcode == Opcode::Halt) &&
+        (instruction & 0x03FFFFFFU) != 0U) {
         return {.error = DecodeError::MalformedEncoding};
     }
     const InstructionFormat format = format_for(opcode);

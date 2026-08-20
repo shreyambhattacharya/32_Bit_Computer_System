@@ -3,9 +3,11 @@
 
 #include "mini32/bus.hpp"
 #include "mini32/cpu_core.hpp"
+#include "mini32/debug_device.hpp"
 #include "mini32/isa.hpp"
 #include "mini32/rom.hpp"
 #include "mini32/ram.hpp"
+#include "mini32/uart.hpp"
 #include "test_support.hpp"
 
 namespace {
@@ -39,7 +41,9 @@ int main() {
     mini32::Rom rom;
     load_program(rom, {encode_i(mini32::Opcode::Addi, 1U, 0U, 7U)});
     mini32::Ram ram;
-    mini32::Bus bus(rom, ram);
+    mini32::Uart uart;
+    mini32::DebugDevice debug;
+    mini32::Bus bus(rom, ram, uart, debug);
     mini32::CpuCore cpu(bus);
 
     CHECK(cpu.microstate() == mini32::Microstate::Fetch);

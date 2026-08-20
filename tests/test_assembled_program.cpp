@@ -5,8 +5,10 @@
 
 #include "mini32/bus.hpp"
 #include "mini32/cpu_core.hpp"
+#include "mini32/debug_device.hpp"
 #include "mini32/ram.hpp"
 #include "mini32/rom.hpp"
+#include "mini32/uart.hpp"
 #include "test_support.hpp"
 
 int main() {
@@ -23,7 +25,9 @@ int main() {
     mini32::Rom rom;
     rom.load_bytes(0U, image);
     mini32::Ram ram;
-    mini32::Bus bus(rom, ram);
+    mini32::Uart uart;
+    mini32::DebugDevice debug;
+    mini32::Bus bus(rom, ram, uart, debug);
     mini32::CpuCore cpu(bus);
     for (std::uint32_t steps = 0U; steps < 32U && !cpu.halted() && !cpu.faulted(); ++steps) {
         static_cast<void>(cpu.step());

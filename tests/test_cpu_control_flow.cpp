@@ -4,8 +4,10 @@
 #include "instruction_encoding.hpp"
 #include "mini32/bus.hpp"
 #include "mini32/cpu_core.hpp"
+#include "mini32/debug_device.hpp"
 #include "mini32/ram.hpp"
 #include "mini32/rom.hpp"
+#include "mini32/uart.hpp"
 #include "test_support.hpp"
 
 namespace {
@@ -29,6 +31,8 @@ std::uint32_t branch_pc(const mini32::Opcode opcode, const std::uint16_t lhs,
                         const std::uint16_t rhs) {
     mini32::Rom rom;
     mini32::Ram ram;
+    mini32::Uart uart;
+    mini32::DebugDevice debug;
     load_program(rom, {
         test_encoding::encode_i(mini32::Opcode::Addi, 1U, 0U, lhs),
         test_encoding::encode_i(mini32::Opcode::Addi, 2U, 0U, rhs),
@@ -36,7 +40,7 @@ std::uint32_t branch_pc(const mini32::Opcode opcode, const std::uint16_t lhs,
         0U,
         static_cast<std::uint32_t>(mini32::Opcode::Halt) << 26U,
     });
-    mini32::Bus bus(rom, ram);
+    mini32::Bus bus(rom, ram, uart, debug);
     mini32::CpuCore cpu(bus);
     static_cast<void>(cpu.step());
     static_cast<void>(cpu.step());
@@ -64,6 +68,8 @@ int main() {
     {
         mini32::Rom rom;
         mini32::Ram ram;
+        mini32::Uart uart;
+        mini32::DebugDevice debug;
         load_program(rom, {
             test_encoding::encode_i(mini32::Opcode::Lui, 1U, 0U, 0x8000U),
             test_encoding::encode_i(mini32::Opcode::Addi, 2U, 0U, 0U),
@@ -71,7 +77,7 @@ int main() {
             0U,
             static_cast<std::uint32_t>(mini32::Opcode::Halt) << 26U,
         });
-        mini32::Bus bus(rom, ram);
+        mini32::Bus bus(rom, ram, uart, debug);
         mini32::CpuCore cpu(bus);
         static_cast<void>(cpu.step());
         static_cast<void>(cpu.step());
@@ -82,6 +88,8 @@ int main() {
     {
         mini32::Rom rom;
         mini32::Ram ram;
+        mini32::Uart uart;
+        mini32::DebugDevice debug;
         load_program(rom, {
             test_encoding::encode_i(mini32::Opcode::Addi, 1U, 0U, 5U),
             test_encoding::encode_i(mini32::Opcode::Addi, 2U, 0U, 5U),
@@ -90,7 +98,7 @@ int main() {
             test_encoding::encode_i(mini32::Opcode::Addi, 3U, 0U, 42U),
             static_cast<std::uint32_t>(mini32::Opcode::Halt) << 26U,
         });
-        mini32::Bus bus(rom, ram);
+        mini32::Bus bus(rom, ram, uart, debug);
         mini32::CpuCore cpu(bus);
         run_until_halted(cpu);
         CHECK(cpu.registers().read(3U) == 42U);
@@ -100,6 +108,8 @@ int main() {
     {
         mini32::Rom rom;
         mini32::Ram ram;
+        mini32::Uart uart;
+        mini32::DebugDevice debug;
         load_program(rom, {
             test_encoding::encode_i(mini32::Opcode::Addi, 1U, 0U, 3U),
             test_encoding::encode_i(mini32::Opcode::Addi, 2U, 0U, 0U),
@@ -108,7 +118,7 @@ int main() {
             test_encoding::encode_b(mini32::Opcode::Bne, 1U, 0U, 0xFFFDU),
             static_cast<std::uint32_t>(mini32::Opcode::Halt) << 26U,
         });
-        mini32::Bus bus(rom, ram);
+        mini32::Bus bus(rom, ram, uart, debug);
         mini32::CpuCore cpu(bus);
         run_until_halted(cpu);
         CHECK(cpu.registers().read(1U) == 0U);
@@ -119,13 +129,15 @@ int main() {
     {
         mini32::Rom rom;
         mini32::Ram ram;
+        mini32::Uart uart;
+        mini32::DebugDevice debug;
         load_program(rom, {
             test_encoding::encode_j(mini32::Opcode::J, 1U),
             test_encoding::encode_i(mini32::Opcode::Addi, 1U, 0U, 99U),
             test_encoding::encode_i(mini32::Opcode::Addi, 1U, 0U, 42U),
             static_cast<std::uint32_t>(mini32::Opcode::Halt) << 26U,
         });
-        mini32::Bus bus(rom, ram);
+        mini32::Bus bus(rom, ram, uart, debug);
         mini32::CpuCore cpu(bus);
         CHECK(cpu.step() == mini32::StepResult::Retired);
         CHECK(cpu.program_counter() == 8U);
@@ -136,8 +148,10 @@ int main() {
     {
         mini32::Rom rom;
         mini32::Ram ram;
+        mini32::Uart uart;
+        mini32::DebugDevice debug;
         load_program(rom, {0U, test_encoding::encode_j(mini32::Opcode::J, 0x03FFFFFFU)});
-        mini32::Bus bus(rom, ram);
+        mini32::Bus bus(rom, ram, uart, debug);
         mini32::CpuCore cpu(bus);
         CHECK(cpu.step() == mini32::StepResult::Retired);
         CHECK(cpu.step() == mini32::StepResult::Retired);
@@ -147,6 +161,8 @@ int main() {
     {
         mini32::Rom rom;
         mini32::Ram ram;
+        mini32::Uart uart;
+        mini32::DebugDevice debug;
         load_program(rom, {
             test_encoding::encode_i(mini32::Opcode::Addi, 1U, 0U, 3U),
             test_encoding::encode_j(mini32::Opcode::Jal, 2U),
@@ -155,7 +171,7 @@ int main() {
             test_encoding::encode_i(mini32::Opcode::Addi, 3U, 0U, 7U),
             test_encoding::encode_jr(31U),
         });
-        mini32::Bus bus(rom, ram);
+        mini32::Bus bus(rom, ram, uart, debug);
         mini32::CpuCore cpu(bus);
         run_until_halted(cpu);
         CHECK(cpu.registers().read(1U) == 3U);
@@ -169,8 +185,10 @@ int main() {
     {
         mini32::Rom rom;
         mini32::Ram ram;
+        mini32::Uart uart;
+        mini32::DebugDevice debug;
         load_program(rom, {test_encoding::encode_j(mini32::Opcode::Jal, 1U)});
-        mini32::Bus bus(rom, ram);
+        mini32::Bus bus(rom, ram, uart, debug);
         mini32::CpuCore cpu(bus);
         cpu.tick(); CHECK(cpu.microstate() == mini32::Microstate::Decode);
         cpu.tick(); CHECK(cpu.microstate() == mini32::Microstate::Execute);
@@ -185,11 +203,13 @@ int main() {
     {
         mini32::Rom rom;
         mini32::Ram ram;
+        mini32::Uart uart;
+        mini32::DebugDevice debug;
         load_program(rom, {
             test_encoding::encode_i(mini32::Opcode::Addi, 1U, 0U, 2U),
             test_encoding::encode_jr(1U),
         });
-        mini32::Bus bus(rom, ram);
+        mini32::Bus bus(rom, ram, uart, debug);
         mini32::CpuCore cpu(bus);
         CHECK(cpu.step() == mini32::StepResult::Retired);
         CHECK(cpu.step() == mini32::StepResult::Retired);
@@ -201,11 +221,13 @@ int main() {
     {
         mini32::Rom rom;
         mini32::Ram ram;
+        mini32::Uart uart;
+        mini32::DebugDevice debug;
         load_program(rom, {
             test_encoding::encode_i(mini32::Opcode::Lui, 1U, 0U, 0x1000U),
             test_encoding::encode_jr(1U),
         });
-        mini32::Bus bus(rom, ram);
+        mini32::Bus bus(rom, ram, uart, debug);
         mini32::CpuCore cpu(bus);
         CHECK(cpu.step() == mini32::StepResult::Retired);
         CHECK(cpu.step() == mini32::StepResult::Retired);

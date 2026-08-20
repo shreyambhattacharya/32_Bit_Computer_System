@@ -1,6 +1,13 @@
 #include "mini32/bus.hpp"
 
 namespace mini32 {
+namespace {
+
+BusFault bus_fault(const MmioFault fault) {
+    return fault == MmioFault::Misaligned ? BusFault::Misaligned : BusFault::Unmapped;
+}
+
+}  // namespace
 
 BusReadResult Bus::read32(const std::uint32_t address) const {
     if ((address & 0x3U) != 0U) {
@@ -23,6 +30,16 @@ BusReadResult Bus::read32(const std::uint32_t address) const {
         return {.fault = ram_result.fault == RamFault::Misaligned ? BusFault::Misaligned
                                                                     : BusFault::Unmapped};
     }
+    if (address >= Uart::kBaseAddress && address <= Uart::kLastAddress) {
+        const MmioReadResult uart_result = uart_.read32(address);
+        return uart_result.ok() ? BusReadResult{.data = uart_result.data}
+                                : BusReadResult{.fault = bus_fault(uart_result.fault)};
+    }
+    if (address >= DebugDevice::kBaseAddress && address <= DebugDevice::kLastAddress) {
+        const MmioReadResult debug_result = debug_.read32(address);
+        return debug_result.ok() ? BusReadResult{.data = debug_result.data}
+                                 : BusReadResult{.fault = bus_fault(debug_result.fault)};
+    }
 
     return {.fault = BusFault::Unmapped};
 }
@@ -39,6 +56,10 @@ BusReadResult Bus::fetch32(const std::uint32_t address) const {
     if (address >= Ram::kBaseAddress && address <= Ram::kLastAddress) {
         return {.fault = BusFault::NonExecutable};
     }
+    if ((address >= Uart::kBaseAddress && address <= Uart::kLastAddress) ||
+        (address >= DebugDevice::kBaseAddress && address <= DebugDevice::kLastAddress)) {
+        return {.fault = BusFault::NonExecutable};
+    }
     return {.fault = BusFault::Unmapped};
 }
 
@@ -53,6 +74,14 @@ BusWriteResult Bus::write32(const std::uint32_t address, const std::uint32_t val
         const RamWriteResult ram_result = ram_.write32(address, value);
         return {.fault = ram_result.fault == RamFault::None ? BusFault::None
                                                               : BusFault::Unmapped};
+    }
+    if (address >= Uart::kBaseAddress && address <= Uart::kLastAddress) {
+        const MmioWriteResult uart_result = uart_.write32(address, value);
+        return {.fault = uart_result.ok() ? BusFault::None : bus_fault(uart_result.fault)};
+    }
+    if (address >= DebugDevice::kBaseAddress && address <= DebugDevice::kLastAddress) {
+        const MmioWriteResult debug_result = debug_.write32(address, value);
+        return {.fault = debug_result.ok() ? BusFault::None : bus_fault(debug_result.fault)};
     }
     return {.fault = BusFault::Unmapped};
 }

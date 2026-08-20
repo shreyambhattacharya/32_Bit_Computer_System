@@ -4,7 +4,7 @@ Mini Computer is a hardware-oriented software model of a compact, custom 32-bit 
 
 ## Project status
 
-The complete Mini32 v0.1 CPU, Python assembler, Python disassembler, and sample assembly programs are implemented and tested together. MMIO peripherals, STM32 integration, and an interactive monitor/debugger remain unimplemented.
+The complete Mini32 v0.1 CPU, Python assembler/disassembler, UART, Debug MMIO peripheral, and standalone simulator are implemented and tested together. Timer/GPIO, STM32 integration, and an interactive monitor/debugger remain unimplemented.
 
 ## Design choices
 
@@ -16,7 +16,7 @@ The complete Mini32 v0.1 CPU, Python assembler, Python disassembler, and sample 
 
 See [architecture](docs/architecture.md), [ISA](docs/isa.md), and [memory map](docs/memory-map.md).
 
-## Planned workflow
+## Build and test
 
 When implementation begins:
 
@@ -26,8 +26,18 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-CTest runs ALU, register-file, decoder, ROM/bus, RAM, arithmetic CPU, data-memory CPU, and control-flow CPU tests.
-Python 3 is required for the assembler/disassembler tests and generated sample ROM images.
+CTest runs ALU, register-file, decoder, ROM/bus, RAM, CPU, MMIO, assembled-program integration, Python assembler/disassembler, and simulator CLI integration tests. Python 3 is required for toolchain tests and generated sample ROM images.
+
+## Assemble and run a program
+
+```powershell
+python assembler/assembler.py programs/hello_uart.asm -o build/hello_uart.bin
+.\build\mini32_sim.exe build\hello_uart.bin
+```
+
+The workflow is `assembly source → raw ROM image → mini32_sim → CpuCore → Bus → MMIO`. `mini32_sim <rom-image> [--max-instructions N]` has a default limit of 1,000,000 retired instructions. Guest UART bytes are written only to stdout; host diagnostics, faults, and the halt summary are written to stderr. It exits zero on `HALT`, and nonzero for a guest fault, invalid CLI/image, or an instruction-limit expiry.
+
+UART lives at `0x20000000–0x2000000F`. Writing `DATA` (`+0x00`) transmits its low byte; `STATUS` (`+0x04`) always returns `TX_READY = 1`; DATA reads return zero. RX, FIFOs, interrupts, and host stdin are intentionally not implemented. Debug lives at `0x20000300–0x2000030F`; its `VALUE` register (`+0x00`) is a reset-zero 32-bit read/write host-visible value. Its `COMMAND` and reserved registers are deterministic no-ops.
 
 ## Layout
 
@@ -38,8 +48,8 @@ Python 3 is required for the assembler/disassembler tests and generated sample R
 - `firmware/stm32/` — later STM32 peripheral-controller firmware.
 - `docs/` — architecture contracts that implementation must follow.
 
-## Six-week scope
+## Future scope
 
-Required: simulator, assembler, ROM/RAM/bus, UART/timer/GPIO MMIO, monitor, tests, and a documented STM32 protocol. Optional: a working serial bridge to the STM32. Stretch: interrupts, ROM monitor/kernel, byte load/store, pipeline, and initial SystemVerilog modules.
+Timer/GPIO MMIO, a monitor/debugger, the STM32 bridge, interrupts, ROM monitor/kernel, byte load/store, a pipeline, and initial SystemVerilog modules are later milestones.
 
 The STM32 bridge remains an integration milestone, not a prerequisite for validating the computer itself.

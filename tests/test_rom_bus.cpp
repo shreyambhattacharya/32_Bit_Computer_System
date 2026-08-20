@@ -2,8 +2,10 @@
 #include <cstdint>
 
 #include "mini32/bus.hpp"
+#include "mini32/debug_device.hpp"
 #include "mini32/rom.hpp"
 #include "mini32/ram.hpp"
+#include "mini32/uart.hpp"
 #include "test_support.hpp"
 
 int main() {
@@ -21,7 +23,9 @@ int main() {
     CHECK(rom.read32(0x10000U).fault == mini32::RomFault::OutOfRange);
 
     mini32::Ram ram;
-    mini32::Bus bus(rom, ram);
+    mini32::Uart uart;
+    mini32::DebugDevice debug;
+    mini32::Bus bus(rom, ram, uart, debug);
     CHECK(bus.read32(0U).data == 0x12345678U);
     CHECK(bus.fetch32(0U).data == 0x12345678U);
     CHECK(bus.write32(mini32::Ram::kBaseAddress, 0xA1B2C3D4U).ok());

@@ -14,7 +14,7 @@ The initial CPU is multi-cycle. `tick()` advances exactly one control state; `st
 | `register_file` | 32 x 32 register file | Two asynchronous conceptual reads; one controlled write; `r0` constant zero. |
 | `decoder` | Combinational decoder | Converts instruction bits into a decoded instruction and control signals. |
 | `alu` | Combinational ALU | Performs arithmetic, logical, comparison, and shift operations. |
-| `bus` | Interconnect/address decoder | Routes aligned reads/writes to ROM, RAM, or a MMIO device. |
+| `bus` | Interconnect/address decoder | Routes aligned reads/writes to ROM, RAM, UART, or Debug; Timer/GPIO remain unmapped. |
 | `ram`, `rom` | Memory blocks | Store guest bytes and enforce their respective permissions. |
 | `uart`, `timer`, `gpio`, `debug`, `stm32` | Peripheral RTL blocks | Implement register-level MMIO behavior. |
 
@@ -33,7 +33,9 @@ flowchart LR
     IMM --> ALU
     ALU --> DBUS[Data bus / address decoder]
     DBUS --> RAM[RAM]
-    DBUS --> MMIO[UART / Timer / GPIO / Debug / STM32]
+    DBUS --> UART[UART]
+    DBUS --> DEBUG[Debug]
+    DBUS --> FUTURE[Reserved Timer / GPIO / STM32 windows]
     ALU --> WB{Writeback mux}
     RAM --> WB
     WB --> RF

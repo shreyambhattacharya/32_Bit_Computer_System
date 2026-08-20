@@ -152,6 +152,7 @@ HALT
         self.assertEqual(disassemble_word((Opcode.ADD << 26) | 1), ".word 0x04000001")
         self.assertEqual(disassemble_word((Opcode.JR << 26) | (1 << 20)), ".word 0x58100000")
         self.assertEqual(disassemble_word((Opcode.LUI << 26) | (1 << 16)), ".word 0x34010000")
+        self.assertEqual(disassemble_word((Opcode.HALT << 26) | (1 << 21)), ".word 0x5C200000")
         malformed = (Opcode.ADD << 26) | 1
         self.assertEqual(assemble_text(disassemble_word(malformed)), malformed.to_bytes(4, "little"))
         with self.assertRaises(ValueError):

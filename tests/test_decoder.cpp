@@ -46,6 +46,10 @@ int main() {
         CHECK(result.instruction->rs2 == 2U);
     }
     CHECK(mini32::Decoder::decode(static_cast<std::uint32_t>(mini32::Opcode::Halt) << 26U).ok());
+    const auto malformed_halt = mini32::Decoder::decode(
+        (static_cast<std::uint32_t>(mini32::Opcode::Halt) << 26U) | (1U << 21U));
+    CHECK(!malformed_halt.ok());
+    CHECK(malformed_halt.error == mini32::DecodeError::MalformedEncoding);
 
     for (const mini32::Opcode opcode : {mini32::Opcode::Addi, mini32::Opcode::Andi,
                                         mini32::Opcode::Ori, mini32::Opcode::Xori,

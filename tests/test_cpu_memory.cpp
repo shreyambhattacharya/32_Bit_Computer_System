@@ -3,9 +3,11 @@
 
 #include "mini32/bus.hpp"
 #include "mini32/cpu_core.hpp"
+#include "mini32/debug_device.hpp"
 #include "mini32/isa.hpp"
 #include "mini32/ram.hpp"
 #include "mini32/rom.hpp"
+#include "mini32/uart.hpp"
 #include "test_support.hpp"
 
 namespace {
@@ -52,6 +54,8 @@ int main() {
     {
         mini32::Rom rom;
         mini32::Ram ram;
+        mini32::Uart uart;
+        mini32::DebugDevice debug;
         load_program(rom, {
             encode_i(mini32::Opcode::Lui, 1U, 0U, 0x1000U),
             encode_i(mini32::Opcode::Addi, 2U, 0U, 42U),
@@ -59,7 +63,7 @@ int main() {
             encode_i(mini32::Opcode::Lw, 3U, 1U, 0U),
             static_cast<std::uint32_t>(mini32::Opcode::Halt) << 26U,
         });
-        mini32::Bus bus(rom, ram);
+        mini32::Bus bus(rom, ram, uart, debug);
         mini32::CpuCore cpu(bus);
 
         retire(cpu, 2U);
@@ -92,6 +96,8 @@ int main() {
     {
         mini32::Rom rom;
         mini32::Ram ram;
+        mini32::Uart uart;
+        mini32::DebugDevice debug;
         load_program(rom, {
             encode_i(mini32::Opcode::Lui, 1U, 0U, 0x1000U),
             encode_i(mini32::Opcode::Addi, 1U, 1U, 8U),
@@ -100,7 +106,7 @@ int main() {
             encode_i(mini32::Opcode::Lw, 3U, 1U, 0xFFFCU),
             static_cast<std::uint32_t>(mini32::Opcode::Halt) << 26U,
         });
-        mini32::Bus bus(rom, ram);
+        mini32::Bus bus(rom, ram, uart, debug);
         mini32::CpuCore cpu(bus);
         retire(cpu, 5U);
         CHECK(cpu.registers().read(3U) == 99U);
@@ -110,6 +116,8 @@ int main() {
     {
         mini32::Rom rom;
         mini32::Ram ram;
+        mini32::Uart uart;
+        mini32::DebugDevice debug;
         load_program(rom, {
             encode_i(mini32::Opcode::Addi, 1U, 0U, 0xFF00U),
             encode_i(mini32::Opcode::Andi, 2U, 1U, 0x8000U),
@@ -124,7 +132,7 @@ int main() {
             encode_r(mini32::Opcode::Shl, 10U, 3U, 12U),
             encode_r(mini32::Opcode::Shr, 11U, 10U, 12U),
         });
-        mini32::Bus bus(rom, ram);
+        mini32::Bus bus(rom, ram, uart, debug);
         mini32::CpuCore cpu(bus);
         retire(cpu, 12U);
         CHECK(cpu.registers().read(2U) == 0x8000U);
@@ -144,8 +152,10 @@ int main() {
                                  const std::uint32_t expected_pc) {
         mini32::Rom rom;
         mini32::Ram ram;
+        mini32::Uart uart;
+        mini32::DebugDevice debug;
         load_program(rom, program);
-        mini32::Bus bus(rom, ram);
+        mini32::Bus bus(rom, ram, uart, debug);
         mini32::CpuCore cpu(bus);
         while (!cpu.faulted()) {
             static_cast<void>(cpu.step());
