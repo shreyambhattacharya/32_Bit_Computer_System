@@ -3,6 +3,7 @@ module tb_mini32_system;
     logic clk = 1'b0, reset;
     logic memory_halted, memory_faulted, smoke_halted, smoke_faulted, fault_halted, fault_faulted, hello_halted, hello_faulted;
     logic readback_halted, readback_faulted;
+    logic gpio_halted, gpio_faulted, timer_halted, timer_faulted;
     cpu_fault_t memory_fault_code, smoke_fault_code, fault_fault_code;
     logic [31:0] memory_pc, smoke_pc, fault_pc;
     logic memory_retire_valid, memory_retire_reg_write, smoke_retire_valid, smoke_retire_reg_write;
@@ -14,6 +15,7 @@ module tb_mini32_system;
     logic readback_retire_valid, readback_retire_reg_write;
     logic [4:0] readback_retire_rd;
     logic [31:0] readback_retire_value, readback_debug_value;
+    logic [31:0] gpio_output, gpio_direction, timer_counter, timer_compare, timer_control;
     logic saw_memory_r3, saw_smoke_r3, saw_smoke_r4, saw_smoke_r5, saw_smoke_r6, fault_wrote_r2;
     logic saw_uart_status_read, saw_debug_value_read;
     logic hello_uart_tx_valid;
@@ -48,6 +50,14 @@ module tb_mini32_system;
         .debug_value(readback_debug_value), .retire_valid(readback_retire_valid),
         .retire_reg_write(readback_retire_reg_write), .retire_rd(readback_retire_rd),
         .retire_value(readback_retire_value)
+    );
+    mini32_system #(.ROM_INIT_FILE("build/generated/gpio_demo.memh")) gpio_dut (
+        .clk(clk), .reset(reset), .halted(gpio_halted), .faulted(gpio_faulted),
+        .gpio_input(32'h0000_0000), .gpio_output(gpio_output), .gpio_direction(gpio_direction)
+    );
+    mini32_system #(.ROM_INIT_FILE("build/generated/timer_demo.memh")) timer_dut (
+        .clk(clk), .reset(reset), .halted(timer_halted), .faulted(timer_faulted),
+        .timer_counter(timer_counter), .timer_compare(timer_compare), .timer_control(timer_control)
     );
     always #5 clk = ~clk;
 
@@ -103,6 +113,10 @@ module tb_mini32_system;
               "peripheral readback program did not retain Debug VALUE");
         check(saw_uart_status_read && saw_debug_value_read,
               "peripheral readback program did not retire UART/Debug read values");
+        check(gpio_halted && !gpio_faulted && gpio_output == 32'h0000_000A && gpio_direction == 32'h0000_000F,
+              "gpio_demo did not produce the expected final GPIO state");
+        check(timer_halted && !timer_faulted && timer_counter == 32'd11 && timer_compare == 32'd5 && timer_control == 1,
+              "timer_demo did not produce the expected instruction-time Timer state");
         if (failures != 0) $fatal(1, "tb_mini32_system: %0d failures", failures);
         $display("tb_mini32_system passed");
         $finish;

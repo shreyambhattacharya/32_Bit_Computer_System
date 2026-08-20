@@ -17,7 +17,8 @@ HEX32 = re.compile(r"[0-9A-Fa-f]{8}\Z")
 HEX_BYTES = re.compile(r"(?:[0-9A-Fa-f]{2})*\Z")
 RETIRE_FIELDS = {"type", "index", "pc", "instruction", "next_pc", "reg_write", "rd", "reg_value",
                  "mem_write", "mem_addr", "mem_value"}
-FINAL_FIELDS = {"type", "status", "pc", "retired", "uart_tx", "debug_value"}
+FINAL_FIELDS = {"type", "status", "pc", "retired", "uart_tx", "debug_value", "gpio_output", "gpio_direction",
+                "timer_counter", "timer_compare", "timer_control"}
 FAULT_FIELDS = {"fault", "fault_pc", "fault_instruction", "fault_address_valid", "fault_address"}
 SUITE = (
     "arithmetic_loop.asm", "memory_roundtrip.asm", "function_call.asm", "rtl_system_smoke.asm",
@@ -25,7 +26,7 @@ SUITE = (
     "differential_readonly_store.asm", "differential_nonexecutable_fetch.asm",
     "differential_misaligned_fetch.asm", "differential_misaligned_load.asm",
     "differential_misaligned_store.asm", "fault_illegal.asm", "differential_malformed.asm",
-    "hello_uart.asm", "debug_demo.asm", "peripheral_readback.asm",
+    "hello_uart.asm", "debug_demo.asm", "peripheral_readback.asm", "gpio_demo.asm", "timer_demo.asm",
 )
 
 
@@ -77,7 +78,8 @@ def _validate_record(record: Any) -> dict[str, Any]:
             raise TraceError("final retired must be a non-negative integer")
         _require_hex(record, "pc")
         _require_byte_stream(record, "uart_tx")
-        _require_hex(record, "debug_value")
+        for field in ("debug_value", "gpio_output", "gpio_direction", "timer_counter", "timer_compare", "timer_control"):
+            _require_hex(record, field)
         if record["status"] == "faulted":
             missing = FAULT_FIELDS - record.keys()
             if missing:
@@ -145,7 +147,9 @@ def compare_traces(cpp: list[dict[str, Any]], rtl: list[dict[str, Any]]) -> None
     if len(cpp_retire) != len(rtl_retire):
         raise DifferentialMismatch(f"retirement trace length differs: C++={len(cpp_retire)}, RTL={len(rtl_retire)}")
     expected, actual = cpp[-1], rtl[-1]
-    difference = _first_difference(expected, actual, ("type", "status", "pc", "retired", "uart_tx", "debug_value"))
+    difference = _first_difference(expected, actual, ("type", "status", "pc", "retired", "uart_tx", "debug_value",
+                                                        "gpio_output", "gpio_direction", "timer_counter",
+                                                        "timer_compare", "timer_control"))
     if difference is None and expected["status"] == "faulted":
         difference = _first_difference(expected, actual,
                                        ("fault", "fault_pc", "fault_instruction", "fault_address_valid"))
@@ -187,7 +191,8 @@ def run_case(assembly: Path, *, reference_trace: Path, work_root: Path, max_inst
         "rtl/include/mini32_pkg.sv", "rtl/core/alu.sv", "rtl/core/register_file.sv",
         "rtl/core/immediate_generator.sv", "rtl/core/decoder.sv", "rtl/core/control_unit.sv",
         "rtl/core/cpu_core.sv", "rtl/memory/rom.sv", "rtl/memory/ram.sv", "rtl/bus/system_bus.sv",
-        "rtl/peripherals/uart_mmio.sv", "rtl/peripherals/debug_mmio.sv", "rtl/top/mini32_system.sv",
+        "rtl/peripherals/uart_mmio.sv", "rtl/peripherals/timer_mmio.sv", "rtl/peripherals/gpio_mmio.sv",
+        "rtl/peripherals/debug_mmio.sv", "rtl/top/mini32_system.sv",
         "rtl/tb/tb_differential_trace.sv")]
     parameter = f'-Ptb_differential_trace.ROM_INIT_FILE="{memh.as_posix()}"'
     _run([iverilog, "-g2012", "-s", "tb_differential_trace", parameter,

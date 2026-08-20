@@ -4,7 +4,7 @@ Mini Computer is a mixed hardware/software implementation of a compact, custom 3
 
 ## Project status
 
-The complete Mini32 v0.1 C++ reference CPU, Python assembler/disassembler, UART/Debug MMIO models, and standalone simulator are implemented and tested together. The SystemVerilog RTL includes a complete vendor-independent CPU + ROM + RAM + system-bus computer with synthesizable UART and Debug MMIO blocks. Automated differential simulation assembles each guest program once, executes its shared image on C++ and RTL, and compares retirement PCs/instructions/next-PCs, committed register effects, stores, HALT, faults, UART transcripts, and final Debug VALUE. This is simulation-based equivalence checking, not formal verification. GPIO/timer, the STM32 bridge, and FPGA-board deployment remain future work.
+The complete Mini32 v0.1 C++ reference CPU, Python assembler/disassembler, and synthesizable CPU/ROM/RAM/MMIO RTL are implemented and tested together. GPIO and a deterministic Timer now join UART and Debug as architecturally visible peripherals. The Timer counts successfully retired Mini32 instructions rather than wall-clock or FPGA cycles, allowing exact C++ ↔ RTL differential verification of its state. GPIO/timer hardware integration, the STM32 bridge, and FPGA-board deployment remain future work.
 
 ## Design choices
 
@@ -37,7 +37,7 @@ python assembler/assembler.py programs/hello_uart.asm -o build/hello_uart.bin
 
 The workflow is `assembly source → raw ROM image → mini32_sim → CpuCore → Bus → MMIO`. `mini32_sim <rom-image> [--max-instructions N]` has a default limit of 1,000,000 retired instructions. Guest UART bytes are written only to stdout; host diagnostics, faults, and the halt summary are written to stderr. It exits zero on `HALT`, and nonzero for a guest fault, invalid CLI/image, or an instruction-limit expiry.
 
-UART lives at `0x20000000–0x2000000F`. Writing `DATA` (`+0x00`) transmits its low byte; `STATUS` (`+0x04`) always returns `TX_READY = 1`; DATA reads return zero. RX, FIFOs, interrupts, and host stdin are intentionally not implemented. Debug lives at `0x20000300–0x2000030F`; its `VALUE` register (`+0x00`) is a reset-zero 32-bit read/write host-visible value. Its `COMMAND` and reserved registers are deterministic no-ops.
+UART lives at `0x20000000–0x2000000F`. Writing `DATA` (`+0x00`) transmits its low byte; `STATUS` (`+0x04`) always returns `TX_READY = 1`; DATA reads return zero. GPIO at `0x20000200–0x2000020F` exposes external INPUT, OUTPUT, and DIRECTION latches. Timer at `0x20000100–0x2000010F` counts successful retired instructions when enabled. Debug lives at `0x20000300–0x2000030F`; its `VALUE` register (`+0x00`) is a reset-zero 32-bit read/write host-visible value.
 
 ## Implementations
 
@@ -84,6 +84,7 @@ Mini32
 5. Complete — synthesizable ROM/RAM/system bus/top-level RTL and assembled-ROM execution.
 6. Complete — automated C++ golden-model ↔ RTL retirement-trace differential simulation.
 7. Complete — synthesizable UART/Debug MMIO RTL and peripheral-state differential checks.
-8. Next — GPIO/timer RTL, STM32 bridge, and FPGA synthesis/board integration.
+8. Complete — GPIO MMIO and deterministic retired-instruction Timer MMIO.
+9. Next — physical UART TX serializer and generic FPGA/platform wrapper, followed by board-specific synthesis, timing, and bring-up.
 
 The STM32 bridge remains a later physical-integration milestone. A Raspberry Pi 5 remains useful as the development and debug host, but does not replace the FPGA logic.

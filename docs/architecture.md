@@ -16,7 +16,7 @@ The initial CPU is multi-cycle. `tick()` advances exactly one control state; `st
 | `register_file` | 32 x 32 register file | Two asynchronous conceptual reads; one controlled write; `r0` constant zero. |
 | `decoder` | Combinational decoder | Converts instruction bits into a decoded instruction and control signals. |
 | `alu` | Combinational ALU | Performs arithmetic, logical, comparison, and shift operations. |
-| `bus` | Interconnect/address decoder | Routes aligned reads/writes to ROM, RAM, UART, or Debug; Timer/GPIO remain unmapped. |
+| `bus` | Interconnect/address decoder | Routes aligned reads/writes to ROM, RAM, UART, Timer, GPIO, or Debug. |
 | `ram`, `rom` | Memory blocks | Store guest bytes and enforce their respective permissions. |
 | `uart`, `timer`, `gpio`, `debug`, `stm32` | Peripheral RTL blocks | Implement register-level MMIO behavior. |
 
@@ -37,7 +37,9 @@ flowchart LR
     DBUS --> RAM[RAM]
     DBUS --> UART[UART]
     DBUS --> DEBUG[Debug]
-    DBUS --> FUTURE[Reserved Timer / GPIO / STM32 windows]
+    DBUS --> TIMER[Timer]
+    DBUS --> GPIO[GPIO]
+    DBUS --> FUTURE[Reserved STM32 window]
     ALU --> WB{Writeback mux}
     RAM --> WB
     WB --> RF
@@ -55,7 +57,9 @@ flowchart TB
     BUS <--> RAM[ram.sv\n64 KiB read/write]
     BUS --> UART[UART MMIO\nTX-only]
     BUS --> DEBUG[Debug MMIO\nVALUE register]
-    BUS --> FUTURE[Reserved Timer / GPIO / STM32\nfault today]
+    BUS --> TIMER[Timer MMIO\nretired-instruction time]
+    BUS --> GPIO[GPIO MMIO\ninput/output/direction]
+    BUS --> FUTURE[Reserved STM32\nfault today]
 ```
 
 `mini32_system.sv` instantiates this hierarchy without moving datapath logic into the top level. The bus permits one outstanding request: it captures CPU request fields, issues the synchronous ROM/RAM access, and raises `ready` for one response cycle. The full 32-bit address is checked for alignment before the 14-bit memory word index is selected, preventing low-bit truncation from aliasing malformed accesses. ROM occupies `0x00000000–0x0000FFFF`; RAM occupies `0x10000000–0x1000FFFF`.
@@ -85,6 +89,10 @@ An ALU instruction passes through `FETCH → DECODE → EXECUTE → WRITEBACK`. 
 On reset, `PC = 0x00000000`, registers read as zero, and the CPU is not halted. `r0` is hardware-defined zero. `r30` is the software stack-pointer convention and `r31` is the return-address convention; only `JAL` has special architectural behavior, writing `PC + 4` to `r31`.
 
 Misaligned instruction, word memory, or MMIO accesses produce a deterministic bus fault and stop execution. There are no arithmetic overflow traps or flags: integer arithmetic wraps modulo 2^32.
+
+## Deterministic Timer
+
+Timer time is architectural, not physical: one tick occurs after each successful instruction retirement when CONTROL.ENABLE is set. Thus a successful control-register write that enables the Timer contributes its first tick, while a faulting instruction contributes none; HALT contributes one. This post-retirement ordering makes the C++ golden model and RTL equivalent despite their different internal cycle counts. A future platform may add a separate physical-clock timer.
 
 ## FPGA migration
 

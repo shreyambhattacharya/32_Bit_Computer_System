@@ -13,12 +13,12 @@ CORE_SOURCES := include/mini32_pkg.sv \
 	core/control_unit.sv \
 	core/cpu_core.sv
 MEMORY_SOURCES := memory/rom.sv memory/ram.sv
-PERIPHERAL_SOURCES := peripherals/uart_mmio.sv peripherals/debug_mmio.sv
+PERIPHERAL_SOURCES := peripherals/uart_mmio.sv peripherals/timer_mmio.sv peripherals/gpio_mmio.sv peripherals/debug_mmio.sv
 BUS_SOURCES := bus/system_bus.sv
 TOP_SOURCES := top/mini32_system.sv
 RTL_SOURCES := $(CORE_SOURCES) $(MEMORY_SOURCES) $(PERIPHERAL_SOURCES) $(BUS_SOURCES) $(TOP_SOURCES)
-TESTBENCHES := tb_alu tb_register_file tb_immediate_generator tb_decoder tb_control_unit tb_cpu_core tb_rom tb_ram tb_uart_mmio tb_debug_mmio tb_system_bus tb_mini32_system
-SYSTEM_IMAGES := $(GENERATED_DIR)/memory_roundtrip.memh $(GENERATED_DIR)/rtl_system_smoke.memh $(GENERATED_DIR)/rtl_system_fault.memh $(GENERATED_DIR)/hello_uart.memh $(GENERATED_DIR)/debug_demo.memh $(GENERATED_DIR)/peripheral_readback.memh
+TESTBENCHES := tb_alu tb_register_file tb_immediate_generator tb_decoder tb_control_unit tb_cpu_core tb_rom tb_ram tb_uart_mmio tb_timer_mmio tb_gpio_mmio tb_debug_mmio tb_system_bus tb_mini32_system
+SYSTEM_IMAGES := $(GENERATED_DIR)/memory_roundtrip.memh $(GENERATED_DIR)/rtl_system_smoke.memh $(GENERATED_DIR)/rtl_system_fault.memh $(GENERATED_DIR)/hello_uart.memh $(GENERATED_DIR)/debug_demo.memh $(GENERATED_DIR)/peripheral_readback.memh $(GENERATED_DIR)/gpio_demo.memh $(GENERATED_DIR)/timer_demo.memh
 
 .PHONY: lint test clean test_converter differential_trace $(TESTBENCHES)
 
@@ -66,6 +66,12 @@ $(BUILD_DIR)/tb_ram: $(RTL_SOURCES) tb/tb_ram.sv | $(BUILD_DIR)
 
 $(BUILD_DIR)/tb_uart_mmio: $(RTL_SOURCES) tb/tb_uart_mmio.sv | $(BUILD_DIR)
 	$(IVERILOG) -g2012 -s tb_uart_mmio -o $@ $^
+
+$(BUILD_DIR)/tb_timer_mmio: $(RTL_SOURCES) tb/tb_timer_mmio.sv | $(BUILD_DIR)
+	$(IVERILOG) -g2012 -s tb_timer_mmio -o $@ $^
+
+$(BUILD_DIR)/tb_gpio_mmio: $(RTL_SOURCES) tb/tb_gpio_mmio.sv | $(BUILD_DIR)
+	$(IVERILOG) -g2012 -s tb_gpio_mmio -o $@ $^
 
 $(BUILD_DIR)/tb_debug_mmio: $(RTL_SOURCES) tb/tb_debug_mmio.sv | $(BUILD_DIR)
 	$(IVERILOG) -g2012 -s tb_debug_mmio -o $@ $^

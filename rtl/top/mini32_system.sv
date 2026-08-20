@@ -4,6 +4,7 @@ module mini32_system #(
 ) (
     input  logic                    clk,
     input  logic                    reset,
+    input  logic [31:0]             gpio_input,
     output logic                    halted,
     output logic                    faulted,
     output mini32_pkg::cpu_fault_t  fault_code,
@@ -24,7 +25,12 @@ module mini32_system #(
     output logic [31:0]             retire_mem_value,
     output logic                    uart_tx_valid,
     output logic [7:0]              uart_tx_data,
-    output logic [31:0]             debug_value
+    output logic [31:0]             debug_value,
+    output logic [31:0]             gpio_output,
+    output logic [31:0]             gpio_direction,
+    output logic [31:0]             timer_counter,
+    output logic [31:0]             timer_compare,
+    output logic [31:0]             timer_control
 );
     import mini32_pkg::*;
     logic bus_valid, bus_ready;
@@ -43,9 +49,12 @@ module mini32_system #(
         .retire_mem_value(retire_mem_value)
     );
     system_bus #(.ROM_INIT_FILE(ROM_INIT_FILE)) system_bus_instance (
-        .clk(clk), .reset(reset), .request_valid(bus_valid), .request_access(bus_access),
+        .clk(clk), .reset(reset), .retire_tick(retire_valid), .gpio_input(gpio_input),
+        .request_valid(bus_valid), .request_access(bus_access),
         .request_addr(bus_addr), .request_wdata(bus_wdata), .response_ready(bus_ready),
         .response_rdata(bus_rdata), .response_fault(bus_fault), .uart_tx_valid(uart_tx_valid),
-        .uart_tx_data(uart_tx_data), .debug_value(debug_value)
+        .uart_tx_data(uart_tx_data), .debug_value(debug_value), .gpio_output(gpio_output),
+        .gpio_direction(gpio_direction), .timer_counter(timer_counter), .timer_compare(timer_compare),
+        .timer_control(timer_control)
     );
 endmodule

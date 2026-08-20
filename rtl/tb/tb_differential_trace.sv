@@ -17,10 +17,12 @@ module tb_differential_trace #(
     integer retire_index = 0;
     logic uart_tx_valid;
     logic [7:0] uart_tx_data;
-    logic [31:0] debug_value;
+    logic [31:0] debug_value, gpio_input, gpio_output, gpio_direction;
+    logic [31:0] timer_counter, timer_compare, timer_control;
     logic [7:0] uart_bytes [0:1023];
     integer uart_count = 0;
     logic finished = 1'b0;
+    logic final_pending = 1'b0;
 
     mini32_system #(.ROM_INIT_FILE(ROM_INIT_FILE)) dut (.*);
     always #5 clk = ~clk;
@@ -67,23 +69,28 @@ module tb_differential_trace #(
                          retire_mem_write ? "true" : "false", retire_mem_addr, retire_mem_value);
                 retire_index <= retire_index + 1;
             end
-            if (halted) begin
-                $display("MINI32_TRACE {\"type\":\"final\",\"status\":\"halted\",\"pc\":\"%08X\",\"retired\":%0d,\"uart_tx\":\"%s\",\"debug_value\":\"%08X\"}",
-                         pc, retire_index + (retire_valid ? 1 : 0), uart_hex(), debug_value);
+            if (final_pending && halted) begin
+                $display("MINI32_TRACE {\"type\":\"final\",\"status\":\"halted\",\"pc\":\"%08X\",\"retired\":%0d,\"uart_tx\":\"%s\",\"debug_value\":\"%08X\",\"gpio_output\":\"%08X\",\"gpio_direction\":\"%08X\",\"timer_counter\":\"%08X\",\"timer_compare\":\"%08X\",\"timer_control\":\"%08X\"}",
+                         pc, retire_index, uart_hex(), debug_value, gpio_output, gpio_direction,
+                         timer_counter, timer_compare, timer_control);
                 finished <= 1'b1;
                 $finish;
-            end else if (faulted) begin
-                $display("MINI32_TRACE {\"type\":\"final\",\"status\":\"faulted\",\"pc\":\"%08X\",\"retired\":%0d,\"uart_tx\":\"%s\",\"debug_value\":\"%08X\",\"fault\":\"%s\",\"fault_pc\":\"%08X\",\"fault_instruction\":\"%08X\",\"fault_address_valid\":%s,\"fault_address\":\"%08X\"}",
-                         pc, retire_index + (retire_valid ? 1 : 0), uart_hex(), debug_value, fault_name(fault_code),
-                         fault_pc, fault_instruction, fault_address_valid ? "true" : "false", fault_address);
+            end else if (final_pending && faulted) begin
+                $display("MINI32_TRACE {\"type\":\"final\",\"status\":\"faulted\",\"pc\":\"%08X\",\"retired\":%0d,\"uart_tx\":\"%s\",\"debug_value\":\"%08X\",\"gpio_output\":\"%08X\",\"gpio_direction\":\"%08X\",\"timer_counter\":\"%08X\",\"timer_compare\":\"%08X\",\"timer_control\":\"%08X\",\"fault\":\"%s\",\"fault_pc\":\"%08X\",\"fault_instruction\":\"%08X\",\"fault_address_valid\":%s,\"fault_address\":\"%08X\"}",
+                         pc, retire_index, uart_hex(), debug_value, gpio_output, gpio_direction,
+                         timer_counter, timer_compare, timer_control, fault_name(fault_code), fault_pc, fault_instruction,
+                         fault_address_valid ? "true" : "false", fault_address);
                 finished <= 1'b1;
                 $finish;
+            end else if (halted || faulted) begin
+                final_pending <= 1'b1;
             end
         end
     end
 
     initial begin
         reset = 1'b1;
+        gpio_input = 32'h0000_0000;
         repeat (2) @(posedge clk);
         reset = 1'b0;
         for (int cycle = 0; cycle < MAX_CYCLES; cycle++) @(posedge clk);

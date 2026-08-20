@@ -1,6 +1,6 @@
 module tb_system_bus;
     import mini32_pkg::*;
-    logic clk = 1'b0, reset, request_valid;
+    logic clk = 1'b0, reset, request_valid, retire_tick;
     bus_access_t request_access;
     logic [31:0] request_addr, request_wdata;
     logic response_ready;
@@ -8,7 +8,8 @@ module tb_system_bus;
     bus_fault_t response_fault;
     logic uart_tx_valid;
     logic [7:0] uart_tx_data;
-    logic [31:0] debug_value;
+    logic [31:0] debug_value, gpio_input, gpio_output, gpio_direction;
+    logic [31:0] timer_counter, timer_compare, timer_control;
     logic [7:0] last_uart_data;
     integer failures = 0, write_count = 0, uart_count = 0;
 
@@ -46,9 +47,13 @@ module tb_system_bus;
         @(posedge clk); #1; check(!response_ready, "ready remained asserted after response consumption");
     endtask
 
+    task automatic timer_tick;
+        retire_tick = 1'b1; @(posedge clk); #1; retire_tick = 1'b0;
+    endtask
+
     initial begin
         reset = 1'b1; request_valid = 1'b0; request_access = BUS_FETCH;
-        request_addr = '0; request_wdata = '0;
+        request_addr = '0; request_wdata = '0; retire_tick = 1'b0; gpio_input = 32'hA5A5_5A5A;
         dut.rom_instance.memory[0] = 32'hCAFE_BABE;
         @(posedge clk); #1; reset = 1'b0;
         transaction(BUS_FETCH, ROM_BASE, 32'h0, BUS_FAULT_NONE, 32'hCAFE_BABE, "ROM fetch failed");
@@ -63,6 +68,14 @@ module tb_system_bus;
         transaction(BUS_WRITE, DEBUG_BASE, 32'hCAFE_BEEF, BUS_FAULT_NONE, 32'h0, "Debug VALUE write failed");
         transaction(BUS_READ, DEBUG_BASE, 32'h0, BUS_FAULT_NONE, 32'hCAFE_BEEF, "Debug VALUE readback failed");
         check(debug_value == 32'hCAFE_BEEF, "Debug output did not expose VALUE");
+        transaction(BUS_WRITE, TIMER_BASE + 32'd4, 32'd1, BUS_FAULT_NONE, 32'h0, "Timer COMPARE write failed");
+        transaction(BUS_WRITE, TIMER_BASE + 32'd8, 32'd1, BUS_FAULT_NONE, 32'h0, "Timer CONTROL write failed");
+        timer_tick;
+        transaction(BUS_READ, TIMER_BASE, 32'h0, BUS_FAULT_NONE, 32'd1, "Timer COUNTER read failed");
+        transaction(BUS_WRITE, GPIO_BASE + 32'd4, 32'h0000_000A, BUS_FAULT_NONE, 32'h0, "GPIO OUTPUT write failed");
+        transaction(BUS_WRITE, GPIO_BASE + 32'd8, 32'h0000_000F, BUS_FAULT_NONE, 32'h0, "GPIO DIRECTION write failed");
+        transaction(BUS_READ, GPIO_BASE, 32'h0, BUS_FAULT_NONE, 32'hA5A5_5A5A, "GPIO INPUT read failed");
+        check(gpio_output == 32'h0000_000A && gpio_direction == 32'h0000_000F, "GPIO outputs wrong");
         transaction(BUS_FETCH, RAM_BASE, 32'h0, BUS_FAULT_NON_EXECUTABLE, 32'h0, "RAM fetch did not fault non-executable");
         transaction(BUS_FETCH, 32'h0000_0002, 32'h0, BUS_FAULT_MISALIGNED, 32'h0, "misaligned fetch fault wrong");
         transaction(BUS_READ, 32'h1000_0002, 32'h0, BUS_FAULT_MISALIGNED, 32'h0, "misaligned read fault wrong");
@@ -73,6 +86,9 @@ module tb_system_bus;
         transaction(BUS_READ, RAM_LAST + 32'd1, 32'h0, BUS_FAULT_UNMAPPED, 32'h0, "address beyond RAM aliased");
         transaction(BUS_FETCH, UART_BASE, 32'h0, BUS_FAULT_NON_EXECUTABLE, 32'h0, "UART fetch fault wrong");
         transaction(BUS_FETCH, DEBUG_BASE, 32'h0, BUS_FAULT_NON_EXECUTABLE, 32'h0, "Debug fetch fault wrong");
+        transaction(BUS_FETCH, TIMER_BASE, 32'h0, BUS_FAULT_NON_EXECUTABLE, 32'h0, "Timer fetch fault wrong");
+        transaction(BUS_FETCH, GPIO_BASE, 32'h0, BUS_FAULT_NON_EXECUTABLE, 32'h0, "GPIO fetch fault wrong");
+        transaction(BUS_READ, STM32_BASE, 32'h0, BUS_FAULT_UNMAPPED, 32'h0, "STM32 data read did not remain unmapped");
         // Reset during an in-flight request must discard the captured request.
         request_access = BUS_FETCH; request_addr = ROM_BASE; request_wdata = 32'h0; request_valid = 1'b1;
         @(posedge clk); #1;

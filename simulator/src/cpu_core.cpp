@@ -148,6 +148,7 @@ void CpuCore::tick() {
         }
         pc_ = next_pc_;
         ++retired_instructions_;
+        bus_.retire_tick();
         microstate_ = control_signals_->halt ? Microstate::Halted : Microstate::Fetch;
         return;
     case Microstate::Halted:
@@ -175,6 +176,7 @@ bool CpuCore::branch_taken() const {
 void CpuCore::retire_to(const std::uint32_t next_pc) {
     pc_ = next_pc;
     ++retired_instructions_;
+    bus_.retire_tick();
     microstate_ = Microstate::Fetch;
 }
 

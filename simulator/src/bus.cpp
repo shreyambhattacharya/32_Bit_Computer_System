@@ -9,6 +9,16 @@ BusFault bus_fault(const MmioFault fault) {
 
 }  // namespace
 
+Timer& Bus::default_timer() {
+    static Timer timer;
+    return timer;
+}
+
+Gpio& Bus::default_gpio() {
+    static Gpio gpio;
+    return gpio;
+}
+
 BusReadResult Bus::read32(const std::uint32_t address) const {
     if ((address & 0x3U) != 0U) {
         return {.fault = BusFault::Misaligned};
@@ -35,6 +45,16 @@ BusReadResult Bus::read32(const std::uint32_t address) const {
         return uart_result.ok() ? BusReadResult{.data = uart_result.data}
                                 : BusReadResult{.fault = bus_fault(uart_result.fault)};
     }
+    if (address >= Timer::kBaseAddress && address <= Timer::kLastAddress) {
+        const MmioReadResult timer_result = timer_.read32(address);
+        return timer_result.ok() ? BusReadResult{.data = timer_result.data}
+                                 : BusReadResult{.fault = bus_fault(timer_result.fault)};
+    }
+    if (address >= Gpio::kBaseAddress && address <= Gpio::kLastAddress) {
+        const MmioReadResult gpio_result = gpio_.read32(address);
+        return gpio_result.ok() ? BusReadResult{.data = gpio_result.data}
+                                : BusReadResult{.fault = bus_fault(gpio_result.fault)};
+    }
     if (address >= DebugDevice::kBaseAddress && address <= DebugDevice::kLastAddress) {
         const MmioReadResult debug_result = debug_.read32(address);
         return debug_result.ok() ? BusReadResult{.data = debug_result.data}
@@ -57,6 +77,8 @@ BusReadResult Bus::fetch32(const std::uint32_t address) const {
         return {.fault = BusFault::NonExecutable};
     }
     if ((address >= Uart::kBaseAddress && address <= Uart::kLastAddress) ||
+        (address >= Timer::kBaseAddress && address <= Timer::kLastAddress) ||
+        (address >= Gpio::kBaseAddress && address <= Gpio::kLastAddress) ||
         (address >= DebugDevice::kBaseAddress && address <= DebugDevice::kLastAddress)) {
         return {.fault = BusFault::NonExecutable};
     }
@@ -78,6 +100,14 @@ BusWriteResult Bus::write32(const std::uint32_t address, const std::uint32_t val
     if (address >= Uart::kBaseAddress && address <= Uart::kLastAddress) {
         const MmioWriteResult uart_result = uart_.write32(address, value);
         return {.fault = uart_result.ok() ? BusFault::None : bus_fault(uart_result.fault)};
+    }
+    if (address >= Timer::kBaseAddress && address <= Timer::kLastAddress) {
+        const MmioWriteResult timer_result = timer_.write32(address, value);
+        return {.fault = timer_result.ok() ? BusFault::None : bus_fault(timer_result.fault)};
+    }
+    if (address >= Gpio::kBaseAddress && address <= Gpio::kLastAddress) {
+        const MmioWriteResult gpio_result = gpio_.write32(address, value);
+        return {.fault = gpio_result.ok() ? BusFault::None : bus_fault(gpio_result.fault)};
     }
     if (address >= DebugDevice::kBaseAddress && address <= DebugDevice::kLastAddress) {
         const MmioWriteResult debug_result = debug_.write32(address, value);

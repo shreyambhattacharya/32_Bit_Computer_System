@@ -15,10 +15,12 @@
 #include "mini32/bus.hpp"
 #include "mini32/cpu_core.hpp"
 #include "mini32/debug_device.hpp"
+#include "mini32/gpio.hpp"
 #include "mini32/decoder.hpp"
 #include "mini32/ram.hpp"
 #include "mini32/rom.hpp"
 #include "mini32/uart.hpp"
+#include "mini32/timer.hpp"
 
 namespace {
 constexpr std::size_t kDefaultInstructionLimit = 1'000'000U;
@@ -114,7 +116,9 @@ int main(const int argc, char* argv[]) {
     std::vector<std::uint8_t> uart_bytes;
     mini32::Uart uart([&uart_bytes](const std::uint8_t byte) { uart_bytes.push_back(byte); });
     mini32::DebugDevice debug;
-    mini32::Bus bus(rom, ram, uart, debug);
+    mini32::Timer timer;
+    mini32::Gpio gpio;
+    mini32::Bus bus(rom, ram, uart, debug, timer, gpio);
     mini32::CpuCore cpu(bus);
 
     for (std::size_t step = 0; step < limit && !cpu.halted() && !cpu.faulted(); ++step) {
@@ -164,7 +168,12 @@ int main(const int argc, char* argv[]) {
     std::cout << "{\"type\":\"final\",\"status\":\"" << (cpu.halted() ? "halted" : "faulted")
               << "\",\"pc\":\"" << hex32(cpu.program_counter()) << "\",\"retired\":"
               << cpu.retired_instructions() << ",\"uart_tx\":\"" << hex_bytes(uart_bytes)
-              << "\",\"debug_value\":\"" << hex32(debug.value()) << "\"";
+              << "\",\"debug_value\":\"" << hex32(debug.value())
+              << "\",\"gpio_output\":\"" << hex32(gpio.output())
+              << "\",\"gpio_direction\":\"" << hex32(gpio.direction())
+              << "\",\"timer_counter\":\"" << hex32(timer.counter())
+              << "\",\"timer_compare\":\"" << hex32(timer.compare())
+              << "\",\"timer_control\":\"" << hex32(timer.enabled() ? 1U : 0U) << "\"";
     if (cpu.faulted()) {
         const mini32::FaultInfo& fault = cpu.fault_info();
         std::cout << ",\"fault\":\"" << fault_name(fault.code) << "\",\"fault_pc\":\""

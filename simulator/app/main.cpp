@@ -16,9 +16,11 @@
 #include "mini32/bus.hpp"
 #include "mini32/cpu_core.hpp"
 #include "mini32/debug_device.hpp"
+#include "mini32/gpio.hpp"
 #include "mini32/ram.hpp"
 #include "mini32/rom.hpp"
 #include "mini32/uart.hpp"
+#include "mini32/timer.hpp"
 
 namespace {
 
@@ -113,7 +115,9 @@ int main(const int argc, char* argv[]) {
     mini32::Ram ram;
     mini32::Uart uart([](const std::uint8_t byte) { std::cout.put(static_cast<char>(byte)); });
     mini32::DebugDevice debug;
-    mini32::Bus bus(rom, ram, uart, debug);
+    mini32::Timer timer;
+    mini32::Gpio gpio;
+    mini32::Bus bus(rom, ram, uart, debug, timer, gpio);
     mini32::CpuCore cpu(bus);
 
     while (!cpu.halted() && !cpu.faulted()) {

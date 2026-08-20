@@ -6,7 +6,7 @@ from verification.differential import DifferentialMismatch, TraceError, compare_
 
 
 RETIRE = '{"type":"retire","index":0,"pc":"00000000","instruction":"00000000","next_pc":"00000004","reg_write":false,"rd":0,"reg_value":"00000000","mem_write":false,"mem_addr":"00000000","mem_value":"00000000"}'
-FINAL = '{"type":"final","status":"halted","pc":"00000004","retired":1,"uart_tx":"","debug_value":"00000000"}'
+FINAL = '{"type":"final","status":"halted","pc":"00000004","retired":1,"uart_tx":"","debug_value":"00000000","gpio_output":"00000000","gpio_direction":"00000000","timer_counter":"00000000","timer_compare":"00000000","timer_control":"00000000"}'
 
 
 class DifferentialTests(unittest.TestCase):
@@ -39,10 +39,10 @@ class DifferentialTests(unittest.TestCase):
                     compare_traces(self.trace(memory_retire), self.trace(changed))
 
     def test_fault_and_length_mismatches(self) -> None:
-        fault = '{"type":"final","status":"faulted","pc":"00000004","retired":1,"uart_tx":"","debug_value":"00000000","fault":"UnmappedLoad","fault_pc":"00000004","fault_instruction":"24000000","fault_address_valid":true,"fault_address":"30000000"}'
+        fault = '{"type":"final","status":"faulted","pc":"00000004","retired":1,"uart_tx":"","debug_value":"00000000","gpio_output":"00000000","gpio_direction":"00000000","timer_counter":"00000000","timer_compare":"00000000","timer_control":"00000000","fault":"UnmappedLoad","fault_pc":"00000004","fault_instruction":"24000000","fault_address_valid":true,"fault_address":"30000000"}'
         changed = fault.replace("UnmappedLoad", "MisalignedLoad")
         with self.assertRaises(DifferentialMismatch): compare_traces(self.trace(final=fault), self.trace(final=changed))
-        short_trace = parse_trace('{"type":"final","status":"halted","pc":"00000000","retired":0,"uart_tx":"","debug_value":"00000000"}\n')
+        short_trace = parse_trace('{"type":"final","status":"halted","pc":"00000000","retired":0,"uart_tx":"","debug_value":"00000000","gpio_output":"00000000","gpio_direction":"00000000","timer_counter":"00000000","timer_compare":"00000000","timer_control":"00000000"}\n')
         with self.assertRaises(DifferentialMismatch): compare_traces(self.trace(), short_trace)
 
     def test_rejects_malformed_trace_records(self) -> None:
@@ -54,16 +54,26 @@ class DifferentialTests(unittest.TestCase):
     def test_normalizes_hexadecimal_case(self) -> None:
         uppercase = RETIRE.replace("00000000", "ABCDEF01", 1).replace("00000004", "ABCDEF05", 1)
         uppercase_final = ('{"type":"final","status":"halted","pc":"ABCDEF05","retired":1,'
-                           '"uart_tx":"48656C6C6F","debug_value":"DEADBEEF"}')
+                           '"uart_tx":"48656C6C6F","debug_value":"DEADBEEF","gpio_output":"A5A55A5A",'
+                           '"gpio_direction":"0000000F","timer_counter":"0000000A","timer_compare":"00000008",'
+                           '"timer_control":"00000001"}')
         records = parse_trace(f"{uppercase}\n{uppercase_final}\n")
         self.assertEqual(records[0]["pc"], "abcdef01")
         self.assertEqual(records[-1]["pc"], "abcdef05")
         self.assertEqual(records[-1]["uart_tx"], "48656c6c6f")
         self.assertEqual(records[-1]["debug_value"], "deadbeef")
+        self.assertEqual(records[-1]["gpio_output"], "a5a55a5a")
+        self.assertEqual(records[-1]["timer_counter"], "0000000a")
+
+    def test_peripheral_final_state_mismatches(self) -> None:
+        for field in ("gpio_output", "gpio_direction", "timer_counter", "timer_compare", "timer_control"):
+            with self.subTest(field=field):
+                changed = FINAL.replace(f'"{field}":"00000000"', f'"{field}":"00000001"')
+                with self.assertRaises(DifferentialMismatch): compare_traces(self.trace(), self.trace(final=changed))
 
     def test_rejects_invalid_hexadecimal_lengths_and_characters(self) -> None:
         for field, replacement in (("pc", "0000000"), ("pc", "000000000"),
-                                   ("debug_value", "0000000g"), ("uart_tx", "0"),
+                                   ("debug_value", "0000000g"), ("gpio_output", "0000000g"), ("uart_tx", "0"),
                                    ("uart_tx", "zz")):
             with self.subTest(field=field, replacement=replacement):
                 original = "" if field == "uart_tx" else ("00000004" if field == "pc" else "00000000")

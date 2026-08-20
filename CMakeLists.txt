@@ -15,9 +15,11 @@ add_library(mini32_core
     simulator/src/cpu_core.cpp
     simulator/src/debug_device.cpp
     simulator/src/decoder.cpp
+    simulator/src/gpio.cpp
     simulator/src/ram.cpp
     simulator/src/register_file.cpp
     simulator/src/rom.cpp
+    simulator/src/timer.cpp
     simulator/src/uart.cpp
 )
 
@@ -100,6 +102,8 @@ if(BUILD_TESTING)
     add_mini32_test(test_cpu_memory)
     add_mini32_test(test_cpu_control_flow)
     add_mini32_test(test_mmio)
+    add_mini32_test(test_gpio)
+    add_mini32_test(test_timer)
 
     add_mini32_test(test_assembled_program)
     add_dependencies(test_assembled_program mini32_sample_binaries)

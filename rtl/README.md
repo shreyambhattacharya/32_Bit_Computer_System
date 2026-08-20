@@ -23,11 +23,13 @@ Generated simulator outputs stay in `rtl/build/`. The root CMake project deliber
 cpu_core  <->  system_bus  <->  rom (64 KiB, read/execute)
                               <->  ram (64 KiB, read/write)
                               <->  uart_mmio (TX-only)
+                              <->  timer_mmio (retired-instruction time)
+                              <->  gpio_mmio (input/output/direction)
                               <->  debug_mmio (VALUE register)
-                              <->  reserved Timer / GPIO / STM32 windows (fault today)
+                              <->  reserved STM32 window (fault today)
 ```
 
-The bus permits one outstanding request. It captures a request, drives a synchronous memory or MMIO access in the next cycle, and pulses `ready` in a response cycle. This makes a normal access take at least one cycle and prevents an asserted store request from repeating writes. Misalignment is checked before address decode. ROM allows fetch/read but faults writes; RAM allows read/write but faults fetches; UART and Debug permit data reads/writes but fault fetches; Timer, GPIO, and STM32 remain unmapped.
+The bus permits one outstanding request. It captures a request, drives a synchronous memory or MMIO access in the next cycle, and pulses `ready` in a response cycle. This makes a normal access take at least one cycle and prevents an asserted store request from repeating writes. Misalignment is checked before address decode. ROM allows fetch/read but faults writes; RAM allows read/write but faults fetches; UART, Timer, GPIO, and Debug permit data reads/writes but fault fetches; STM32 remains unmapped.
 
 ROM and RAM are 16,384 x 32-bit arrays, covering the full 64 KiB architectural regions without aliasing. Reads are synchronous. RAM writes are synchronous and RAM deliberately has no reset or power-up initialization; guest programs must write data before reading it. For v0.1 aligned 32-bit accesses, each array word has Mini32 little-endian external semantics.
 
@@ -63,3 +65,5 @@ Artifacts are retained under ignored `verification/build/` directories. The suit
 | `DebugDevice` | `peripherals/debug_mmio.sv` | Persistent Debug VALUE register. |
 
 UART DATA writes pulse `uart_tx_valid` with the low byte and STATUS reads return `TX_READY = 1`. Debug VALUE is reset-zero, read/write at offset zero, and propagated through `mini32_system` as `debug_value`; other documented offsets read zero and ignore writes. The CPU unit test still supplies behavioral memory/bus behavior to isolate core tests; system tests exercise the real RTL hierarchy and assembled ROM images.
+
+`timer_mmio.sv` is intentionally an instruction-time device: `retire_tick` is driven only by `cpu_core`'s successful retirement event. A control write that enables it observes that retirement as its first tick; a disable write does not tick. This gives the same final Timer state as the C++ model without comparing internal clocks. `gpio_mmio.sv` contains no tri-states; `gpio_output` and `gpio_direction` are exported for a future board wrapper.
