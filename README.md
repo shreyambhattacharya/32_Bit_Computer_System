@@ -4,7 +4,7 @@ Mini Computer is a mixed hardware/software implementation of a compact, custom 3
 
 ## Project status
 
-The complete Mini32 v0.1 C++ reference CPU, Python assembler/disassembler, and synthesizable CPU/ROM/RAM/MMIO RTL are implemented and tested together. GPIO and a deterministic Timer now join UART and Debug as architecturally visible peripherals. The Timer counts successfully retired Mini32 instructions rather than wall-clock or FPGA cycles, allowing exact C++ ↔ RTL differential verification of its state. GPIO/timer hardware integration, the STM32 bridge, and FPGA-board deployment remain future work.
+The complete Mini32 v0.1 C++ reference CPU, Python assembler/disassembler, and synthesizable CPU/ROM/RAM/MMIO RTL are implemented and tested together. GPIO and a deterministic Timer join UART and Debug as architecturally visible peripherals. A vendor-independent FPGA platform layer now adds reset synchronization, a buffered physical 8N1 UART TX pin, and a generic wrapper without selecting a board. The Timer counts successfully retired Mini32 instructions rather than wall-clock or FPGA cycles, allowing exact C++ ↔ RTL differential verification of its state.
 
 ## Design choices
 
@@ -51,6 +51,8 @@ UART lives at `0x20000000–0x2000000F`. Writing `DATA` (`+0x00`) transmits its 
 
 The RTL image flow is `programs/*.asm → assembler → raw .bin → rtl/tools/bin_to_mem.py → .memh → rom.sv → mini32_system`. Run `cd rtl; make test` for RTL benches, or `python verification/differential.py --suite` after the CMake build for C++ ↔ RTL retirement-trace comparison.
 
+`mini32_fpga_platform` is the vendor-independent physical wrapper: it synchronizes an external active-low reset, queues the architectural UART byte events, and serializes them onto a one-bit 8N1 `uart_tx` signal. Its `CLOCK_HZ`, `UART_BAUD`, and FIFO-depth parameters are board-agnostic defaults. GPIO remains separate input/output/direction signals until a board wrapper maps pins. See [FPGA platform](docs/fpga-platform.md).
+
 ### Toolchain
 
 `assembler/` contains the Python assembler and disassembler used to produce the same ROM images for C++ and, later, RTL simulation.
@@ -85,6 +87,8 @@ Mini32
 6. Complete — automated C++ golden-model ↔ RTL retirement-trace differential simulation.
 7. Complete — synthesizable UART/Debug MMIO RTL and peripheral-state differential checks.
 8. Complete — GPIO MMIO and deterministic retired-instruction Timer MMIO.
-9. Next — physical UART TX serializer and generic FPGA/platform wrapper, followed by board-specific synthesis, timing, and bring-up.
+9. Complete — physical UART TX serializer, platform FIFO, reset synchronizer, generic FPGA wrapper, and Linux CI.
+10. Next — select an FPGA board, then add only its top-level pin mapping, clock/reset parameters, constraints, synthesis flow, and physical UART/GPIO demonstration.
+11. Stretch — STM32 bridge, Raspberry Pi host-tooling enhancements, and a future RV32I implementation.
 
 The STM32 bridge remains a later physical-integration milestone. A Raspberry Pi 5 remains useful as the development and debug host, but does not replace the FPGA logic.

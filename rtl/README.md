@@ -67,3 +67,24 @@ Artifacts are retained under ignored `verification/build/` directories. The suit
 UART DATA writes pulse `uart_tx_valid` with the low byte and STATUS reads return `TX_READY = 1`. Debug VALUE is reset-zero, read/write at offset zero, and propagated through `mini32_system` as `debug_value`; other documented offsets read zero and ignore writes. The CPU unit test still supplies behavioral memory/bus behavior to isolate core tests; system tests exercise the real RTL hierarchy and assembled ROM images.
 
 `timer_mmio.sv` is intentionally an instruction-time device: `retire_tick` is driven only by `cpu_core`'s successful retirement event. A control write that enables it observes that retirement as its first tick; a disable write does not tick. This gives the same final Timer state as the C++ model without comparing internal clocks. `gpio_mmio.sv` contains no tri-states; `gpio_output` and `gpio_direction` are exported for a future board wrapper.
+
+## Generic FPGA platform
+
+`top/mini32_fpga_platform.sv` wraps the architectural `mini32_system` without
+changing it. An external active-low reset goes through `platform/reset_sync.sv`
+(asynchronous assertion, two-clock synchronous release). UART MMIO events go
+through `platform/uart_tx_fifo.sv` before `phy/uart_tx_phy.sv` drives the
+one-bit physical TX pin:
+
+```text
+mini32_system -> UART event FIFO -> 8N1 UART TX PHY -> uart_tx
+```
+
+The PHY uses the elaboration-time rounded divider
+`(CLOCK_HZ + UART_BAUD/2) / UART_BAUD`; its actual baud is
+`CLOCK_HZ / CLKS_PER_BIT`. The FIFO defaults to 256 bytes and exposes a sticky
+non-architectural overflow signal because Mini32 v0.1's architectural
+`TX_READY` remains always one. GPIO is still represented as separate input,
+output, and direction signals. No vendor primitive, board top, clock PLL, pin
+constraint, or physical tri-state is included. The architectural differential
+runner intentionally remains connected to `mini32_system`, not UART timing.
