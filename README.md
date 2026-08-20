@@ -1,10 +1,10 @@
 # Mini Computer
 
-Mini Computer is a hardware-oriented software model of a compact, custom 32-bit RISC computer. The first delivery is a deterministic multi-cycle C++ simulator and Python assembler; its module boundaries and timing model are chosen to transfer cleanly to future SystemVerilog/FPGA work.
+Mini Computer is a mixed hardware/software implementation of a compact, custom 32-bit RISC computer. The Python toolchain produces Mini32 ROM images; the C++ simulator is the golden architectural reference; SystemVerilog is the synthesizable hardware implementation.
 
 ## Project status
 
-The complete Mini32 v0.1 CPU, Python assembler/disassembler, UART, Debug MMIO peripheral, and standalone simulator are implemented and tested together. Timer/GPIO, STM32 integration, and an interactive monitor/debugger remain unimplemented.
+The complete Mini32 v0.1 C++ reference CPU, Python assembler/disassembler, UART/Debug MMIO models, and standalone simulator are implemented and tested together. Synthesizable SystemVerilog foundation modules (package, ALU, register file, immediate generator, decoder, and control unit) have begun; the full RTL CPU core is next.
 
 ## Design choices
 
@@ -18,7 +18,7 @@ See [architecture](docs/architecture.md), [ISA](docs/isa.md), and [memory map](d
 
 ## Build and test
 
-When implementation begins:
+Build and test the C++ reference model:
 
 ```powershell
 cmake -S . -B build
@@ -39,17 +39,47 @@ The workflow is `assembly source → raw ROM image → mini32_sim → CpuCore �
 
 UART lives at `0x20000000–0x2000000F`. Writing `DATA` (`+0x00`) transmits its low byte; `STATUS` (`+0x04`) always returns `TX_READY = 1`; DATA reads return zero. RX, FIFOs, interrupts, and host stdin are intentionally not implemented. Debug lives at `0x20000300–0x2000030F`; its `VALUE` register (`+0x00`) is a reset-zero 32-bit read/write host-visible value. Its `COMMAND` and reserved registers are deterministic no-ops.
 
+## Implementations
+
+### C++ reference model
+
+`simulator/` is the deterministic golden model for instruction semantics, state transitions, faults, MMIO behavior, and integration tests. CMake builds this model and its tests; it is not the final hardware implementation.
+
+### SystemVerilog RTL
+
+`rtl/` contains vendor-independent synthesizable hardware modules and self-checking module testbenches. It has an independent RTL-oriented Makefile workflow and is not compiled by CMake. The future FPGA hosts this digital logic; the Raspberry Pi remains a development, simulation, programming, terminal, and debug companion rather than a replacement for it.
+
+### Toolchain
+
+`assembler/` contains the Python assembler and disassembler used to produce the same ROM images for C++ and, later, RTL simulation.
+
 ## Layout
+
+```text
+Mini32
+├── assembler/   Python assembler and disassembler
+├── simulator/   C++ golden reference model
+├── rtl/         SystemVerilog hardware implementation
+├── programs/    shared guest-program inputs
+├── tests/       C++ and Python regression tests
+└── docs/        architectural and verification contracts
+```
 
 - `simulator/` — C++ modules corresponding to future hardware blocks.
 - `assembler/` — Python custom-ISA assembler.
 - `programs/` — assembly integration programs.
 - `tests/` — unit and end-to-end regression tests.
+- `rtl/` — synthesizable SystemVerilog hardware modules and module-level testbenches.
 - `firmware/stm32/` — later STM32 peripheral-controller firmware.
 - `docs/` — architecture contracts that implementation must follow.
 
-## Future scope
+## Roadmap
 
-Timer/GPIO MMIO, a monitor/debugger, the STM32 bridge, interrupts, ROM monitor/kernel, byte load/store, a pipeline, and initial SystemVerilog modules are later milestones.
+1. Complete — architecture and C++ reference CPU.
+2. Complete — Python assembler/disassembler.
+3. Complete — C++ UART/Debug MMIO and standalone simulator.
+4. Current — RTL foundation: package, ALU, register file, decoder, immediate generator, and control unit.
+5. Next — multi-cycle `cpu_core.sv`.
+6. Future — ROM/RAM/bus RTL, full ISA/control-flow RTL with differential tests, UART/GPIO/timer RTL, STM32 bridge, and FPGA synthesis/board integration.
 
-The STM32 bridge remains an integration milestone, not a prerequisite for validating the computer itself.
+The STM32 bridge remains a later physical-integration milestone. A Raspberry Pi 5 remains useful as the development and debug host, but does not replace the FPGA logic.

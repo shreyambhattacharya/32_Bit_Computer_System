@@ -1,3 +1,4 @@
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -15,6 +16,12 @@ def words(image: bytes) -> list[int]:
 
 
 class AssemblerEncodingTests(unittest.TestCase):
+    def test_rtl_opcode_constants_match_the_python_isa(self) -> None:
+        package = (ROOT / "rtl" / "include" / "mini32_pkg.sv").read_text(encoding="utf-8")
+        actual = dict(re.findall(r"\bOP_([A-Z]+)\s*=\s*6'h([0-9A-Fa-f]{2})", package))
+        expected = {opcode.name: f"{int(opcode):02X}" for opcode in Opcode}
+        self.assertEqual(actual, expected)
+
     def test_opcode_values_match_the_documented_isa(self) -> None:
         expected = [
             ("NOP", 0x00), ("ADD", 0x01), ("SUB", 0x02), ("AND", 0x03),

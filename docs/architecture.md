@@ -4,6 +4,8 @@
 
 Mini Computer models a complete small computer, not a Raspberry Pi application. The host loads ROM images, presents UART/debug output, and later bridges MMIO to an STM32. The guest CPU, bus, RAM, ROM, and peripherals are separate components with contracts suitable for RTL translation.
 
+The repository maintains two implementations of this architecture: the C++ simulator is the golden reference for semantics, faults, and system behavior; the vendor-independent SystemVerilog RTL is the synthesizable hardware implementation. They are verified against the same architectural contracts rather than sharing source code. CMake remains the C++ reference-model build system, while `rtl/` has its own simulation workflow.
+
 The initial CPU is multi-cycle. `tick()` advances exactly one control state; `step()` repeatedly ticks until one instruction retires, halts, or faults. This is more FPGA-realistic than treating arbitrary memory as combinational, because FPGA block RAM normally has registered/synchronous reads.
 
 ## Major modules
