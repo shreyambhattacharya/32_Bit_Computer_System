@@ -4,7 +4,7 @@ Mini Computer is a mixed hardware/software implementation of a compact, custom 3
 
 ## Project status
 
-The complete Mini32 v0.1 C++ reference CPU, Python assembler/disassembler, UART/Debug MMIO models, and standalone simulator are implemented and tested together. Synthesizable SystemVerilog foundation modules (package, ALU, register file, immediate generator, decoder, and control unit) have begun; the full RTL CPU core is next.
+The complete Mini32 v0.1 C++ reference CPU, Python assembler/disassembler, UART/Debug MMIO models, and standalone simulator are implemented and tested together. The SystemVerilog RTL now includes a synthesizable multi-cycle CPU core verified against a behavioral request/response bus; synthesizable ROM, RAM, bus, and peripherals are next.
 
 ## Design choices
 
@@ -78,8 +78,8 @@ Mini32
 1. Complete — architecture and C++ reference CPU.
 2. Complete — Python assembler/disassembler.
 3. Complete — C++ UART/Debug MMIO and standalone simulator.
-4. Current — RTL foundation: package, ALU, register file, decoder, immediate generator, and control unit.
-5. Next — multi-cycle `cpu_core.sv`.
-6. Future — ROM/RAM/bus RTL, full ISA/control-flow RTL with differential tests, UART/GPIO/timer RTL, STM32 bridge, and FPGA synthesis/board integration.
+4. Complete — RTL foundation and multi-cycle `cpu_core.sv`.
+5. Next — ROM/RAM/system-bus RTL and assembled-ROM execution.
+6. Future — C++/RTL differential tests, UART/GPIO/timer RTL, STM32 bridge, and FPGA synthesis/board integration.
 
 The STM32 bridge remains a later physical-integration milestone. A Raspberry Pi 5 remains useful as the development and debug host, but does not replace the FPGA logic.

@@ -4,11 +4,11 @@ Mini32 uses the C++ simulator as its golden architectural reference and SystemVe
 
 ## Layer 1 — module tests
 
-Self-checking SystemVerilog testbenches cover the ALU, register file, immediate generator, decoder, and control unit. They validate architectural edge cases, field extraction, canonical encodings, and control signals without a CPU core.
+Self-checking SystemVerilog testbenches cover the ALU, register file, immediate generator, decoder, control unit, and multi-cycle CPU core. The CPU testbench uses behavioral instruction/data arrays, configurable wait states, and injected bus faults; it checks guest arithmetic, logical/immediate operations, memory roundtrips, control flow, JAL/JR, retirement, stalls, and fault mapping.
 
 ## Layer 2 — CPU equivalence
 
-After `cpu_core.sv` exists, the same assembled ROM image will run on the C++ golden model and RTL CPU. Tests will compare registers, PC, RAM, and halt/fault outcomes.
+The next step is to run the same assembled ROM image on the C++ golden model and RTL CPU. Tests will compare registers, PC, RAM, and halt/fault outcomes through the retirement interface.
 
 ## Layer 3 — system equivalence
 

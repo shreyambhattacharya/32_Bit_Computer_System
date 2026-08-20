@@ -12,7 +12,7 @@ module decoder (
     import mini32_pkg::*;
 
     always_comb begin
-        opcode = opcode_t'(instruction[31:26]);
+        opcode = instruction[31:26];
         rd = instruction[25:21];
         rs1 = instruction[20:16];
         rs2 = instruction[15:11];

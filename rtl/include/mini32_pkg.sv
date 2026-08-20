@@ -1,31 +1,31 @@
 package mini32_pkg;
 
-    typedef enum logic [5:0] {
-        OP_NOP  = 6'h00,
-        OP_ADD  = 6'h01,
-        OP_SUB  = 6'h02,
-        OP_AND  = 6'h03,
-        OP_OR   = 6'h04,
-        OP_XOR  = 6'h05,
-        OP_SLT  = 6'h06,
-        OP_SHL  = 6'h07,
-        OP_SHR  = 6'h08,
-        OP_ADDI = 6'h09,
-        OP_ANDI = 6'h0A,
-        OP_ORI  = 6'h0B,
-        OP_XORI = 6'h0C,
-        OP_LUI  = 6'h0D,
-        OP_LW   = 6'h0E,
-        OP_SW   = 6'h0F,
-        OP_BEQ  = 6'h10,
-        OP_BNE  = 6'h11,
-        OP_BLT  = 6'h12,
-        OP_BGE  = 6'h13,
-        OP_J    = 6'h14,
-        OP_JAL  = 6'h15,
-        OP_JR   = 6'h16,
-        OP_HALT = 6'h17
-    } opcode_t;
+    // Keep raw opcode bits representable so the decoder can identify unallocated values.
+    typedef logic [5:0] opcode_t;
+    localparam opcode_t OP_NOP  = 6'h00;
+    localparam opcode_t OP_ADD  = 6'h01;
+    localparam opcode_t OP_SUB  = 6'h02;
+    localparam opcode_t OP_AND  = 6'h03;
+    localparam opcode_t OP_OR   = 6'h04;
+    localparam opcode_t OP_XOR  = 6'h05;
+    localparam opcode_t OP_SLT  = 6'h06;
+    localparam opcode_t OP_SHL  = 6'h07;
+    localparam opcode_t OP_SHR  = 6'h08;
+    localparam opcode_t OP_ADDI = 6'h09;
+    localparam opcode_t OP_ANDI = 6'h0A;
+    localparam opcode_t OP_ORI  = 6'h0B;
+    localparam opcode_t OP_XORI = 6'h0C;
+    localparam opcode_t OP_LUI  = 6'h0D;
+    localparam opcode_t OP_LW   = 6'h0E;
+    localparam opcode_t OP_SW   = 6'h0F;
+    localparam opcode_t OP_BEQ  = 6'h10;
+    localparam opcode_t OP_BNE  = 6'h11;
+    localparam opcode_t OP_BLT  = 6'h12;
+    localparam opcode_t OP_BGE  = 6'h13;
+    localparam opcode_t OP_J    = 6'h14;
+    localparam opcode_t OP_JAL  = 6'h15;
+    localparam opcode_t OP_JR   = 6'h16;
+    localparam opcode_t OP_HALT = 6'h17;
 
     typedef enum logic [3:0] {
         ALU_ADD,
@@ -76,5 +76,44 @@ package mini32_pkg;
         BRANCH_SIGNED_LESS_THAN,
         BRANCH_SIGNED_GREATER_EQUAL
     } branch_predicate_t;
+
+    typedef enum logic [1:0] {
+        BUS_FETCH,
+        BUS_READ,
+        BUS_WRITE
+    } bus_access_t;
+
+    typedef enum logic [2:0] {
+        BUS_FAULT_NONE,
+        BUS_FAULT_MISALIGNED,
+        BUS_FAULT_UNMAPPED,
+        BUS_FAULT_READ_ONLY,
+        BUS_FAULT_NON_EXECUTABLE
+    } bus_fault_t;
+
+    typedef enum logic [3:0] {
+        CPU_FAULT_NONE,
+        CPU_FAULT_MISALIGNED_INSTRUCTION_FETCH,
+        CPU_FAULT_UNMAPPED_INSTRUCTION_FETCH,
+        CPU_FAULT_NON_EXECUTABLE_INSTRUCTION_FETCH,
+        CPU_FAULT_ILLEGAL_INSTRUCTION,
+        CPU_FAULT_MALFORMED_INSTRUCTION,
+        CPU_FAULT_UNSUPPORTED_INSTRUCTION,
+        CPU_FAULT_MISALIGNED_LOAD,
+        CPU_FAULT_UNMAPPED_LOAD,
+        CPU_FAULT_MISALIGNED_STORE,
+        CPU_FAULT_UNMAPPED_STORE,
+        CPU_FAULT_READ_ONLY_STORE
+    } cpu_fault_t;
+
+    typedef enum logic [2:0] {
+        CPU_STATE_FETCH,
+        CPU_STATE_DECODE,
+        CPU_STATE_EXECUTE,
+        CPU_STATE_MEMORY,
+        CPU_STATE_WRITEBACK,
+        CPU_STATE_HALTED,
+        CPU_STATE_FAULT
+    } cpu_state_t;
 
 endpackage

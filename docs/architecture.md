@@ -62,7 +62,7 @@ The control unit derives the following explicit signals from the decoded opcode 
 | `branch_predicate` | Select equality, inequality, signed-less-than, or signed-greater/equal test. |
 | `halt` | Enter the terminal halted state after `HALT`. |
 
-An ALU instruction passes through `FETCH → DECODE → EXECUTE → WRITEBACK`. A load adds `MEMORY` before writeback; a store finishes after `MEMORY`; a branch/jump updates PC in `EXECUTE`. The simulator must log its microstate if trace mode is enabled.
+An ALU instruction passes through `FETCH → DECODE → EXECUTE → WRITEBACK`. A load adds `MEMORY` before writeback; a store finishes after `MEMORY`; a branch/jump updates PC in `EXECUTE`. In the RTL, `FETCH` and `MEMORY` are control phases that may persist for multiple clock cycles while a request/response bus holds `ready` low; no new request or retirement occurs during that stall.
 
 ## Reset, faults, and conventions
 

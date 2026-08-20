@@ -15,6 +15,8 @@ make clean
 
 Generated simulator outputs stay in `rtl/build/`. The root CMake project deliberately does not compile RTL; it continues to build the C++ golden model and software tests.
 
+`cpu_core.sv` uses an abstract valid/ready bus interface. When `bus_valid` is asserted, `bus_access`, `bus_addr`, and `bus_wdata` remain stable until the future bus raises `bus_ready`. `BUS_FETCH` distinguishes instruction fetches from data reads so execute permission can be enforced. A ready response carries `bus_rdata` and `bus_fault`; the CPU has no ROM, RAM, bus, or peripheral implementation internally.
+
 ## Current modules
 
 | C++ reference | RTL | Role |
@@ -24,11 +26,11 @@ Generated simulator outputs stay in `rtl/build/`. The root CMake project deliber
 | `Decoder` | `core/decoder.sv` | Field extraction and canonical encoding validation. |
 | `Decoder::immediate_value` | `core/immediate_generator.sv` | Immediate extension/placement. |
 | `ControlSignals` / `control_for` | `core/control_unit.sv` | Combinational opcode-to-control decode. |
-| `CpuCore` | future `core/cpu_core.sv` | Multi-cycle datapath/sequencer. |
+| `CpuCore` | `core/cpu_core.sv` | Multi-cycle datapath/sequencer with abstract bus interface. |
 | `Rom` | future `memory/rom.sv` | Program storage. |
 | `Ram` | future `memory/ram.sv` | Data storage. |
 | `Bus` | future `bus/bus.sv` | Address decoding/interconnect. |
 | `Uart` | future `peripherals/uart.sv` | UART register block. |
 | `DebugDevice` | future `peripherals/debug_device.sv` | Debug register block. |
 
-The future `memory/`, `bus/`, `peripherals/`, and `top/` hierarchy is intentionally not implemented during this foundation milestone.
+The future `memory/`, `bus/`, `peripherals/`, and `top/` hierarchy remains intentionally unimplemented. The CPU testbench supplies behavioral memory and bus behavior only for verification.

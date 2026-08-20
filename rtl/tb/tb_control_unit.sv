@@ -56,7 +56,7 @@ module tb_control_unit;
         check_control(OP_JAL,  1,0,ALU_ADD,IMM_NONE,MEM_NONE,WB_PC_PLUS_4,DEST_RETURN_ADDRESS,FLOW_RELATIVE_JUMP,BRANCH_NONE,0);
         check_control(OP_JR,   0,0,ALU_ADD,IMM_NONE,MEM_NONE,WB_ALU,DEST_DECODED_RD,FLOW_REGISTER_JUMP,BRANCH_NONE,0);
         check_control(OP_HALT, 0,0,ALU_ADD,IMM_NONE,MEM_NONE,WB_ALU,DEST_DECODED_RD,FLOW_SEQUENTIAL,BRANCH_NONE,1);
-        opcode = opcode_t'(6'h3f); #1;
+        opcode = 6'h3f; #1;
         check(!supported, "unallocated opcode is unsupported");
         if (failures != 0) $fatal(1, "tb_control_unit: %0d failures", failures);
         $display("tb_control_unit passed");
