@@ -6,7 +6,10 @@ module uart_mmio (
     input  logic        read_enable,
     input  logic        write_enable,
     input  logic [3:0]  register_offset,
+    // Mini32 UART DATA writes are architecturally low-byte-only.
+    /* verilator lint_off UNUSEDSIGNAL */
     input  logic [31:0] write_data,
+    /* verilator lint_on UNUSEDSIGNAL */
     output logic [31:0] read_data,
     output logic        tx_valid,
     output logic [7:0]  tx_data

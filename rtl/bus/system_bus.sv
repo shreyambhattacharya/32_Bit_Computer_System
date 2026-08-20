@@ -78,7 +78,8 @@ module system_bus #(
         // Alignment is intentionally first, before range truncation/decode.
         if (pending_addr[1:0] != 2'b00) begin
             pending_fault = BUS_FAULT_MISALIGNED;
-        end else if ((pending_addr >= ROM_BASE) && (pending_addr <= ROM_LAST)) begin
+        // ROM begins at address zero, so the upper bound fully defines its range.
+        end else if (pending_addr <= ROM_LAST) begin
             pending_rom = 1'b1;
             if (pending_access == BUS_WRITE) pending_fault = BUS_FAULT_READ_ONLY;
         end else if ((pending_addr >= RAM_BASE) && (pending_addr <= RAM_LAST)) begin
