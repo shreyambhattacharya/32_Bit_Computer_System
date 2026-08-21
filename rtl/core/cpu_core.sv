@@ -222,8 +222,12 @@ module cpu_core (
                 end
                 CPU_STATE_DECODE: begin
                     if (!decode_valid) begin
-                        enter_fault(decode_malformed ? CPU_FAULT_MALFORMED_INSTRUCTION : CPU_FAULT_ILLEGAL_INSTRUCTION,
-                                    instruction_register, 1'b0, 32'h0000_0000);
+                        if (decode_malformed)
+                            enter_fault(CPU_FAULT_MALFORMED_INSTRUCTION, instruction_register,
+                                        1'b0, 32'h0000_0000);
+                        else
+                            enter_fault(CPU_FAULT_ILLEGAL_INSTRUCTION, instruction_register,
+                                        1'b0, 32'h0000_0000);
                     end else if (!control_supported) begin
                         enter_fault(CPU_FAULT_UNSUPPORTED_INSTRUCTION, instruction_register, 1'b0, 32'h0000_0000);
                     end else begin
@@ -287,7 +291,10 @@ module cpu_core (
                     pc <= next_pc_latch;
                     record_retirement(control_reg_write, writeback_destination, writeback_value, next_pc_latch,
                                       1'b0, 32'h0000_0000, 32'h0000_0000);
-                    state <= control_halt ? CPU_STATE_HALTED : CPU_STATE_FETCH;
+                    if (control_halt)
+                        state <= CPU_STATE_HALTED;
+                    else
+                        state <= CPU_STATE_FETCH;
                 end
                 CPU_STATE_HALTED, CPU_STATE_FAULT: begin
                     state <= state;

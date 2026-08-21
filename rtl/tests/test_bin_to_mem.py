@@ -7,12 +7,15 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-from bin_to_mem import ROM_SIZE_BYTES, convert_image  # noqa: E402
+from bin_to_mem import ROM_SIZE_BYTES, ROM_WORD_COUNT, convert_image  # noqa: E402
 
 
 class BinToMemTests(unittest.TestCase):
     def test_little_endian_words(self) -> None:
-        self.assertEqual(convert_image(bytes.fromhex("78 56 34 12 EF CD AB 90")), "12345678\n90ABCDEF\n")
+        words = convert_image(bytes.fromhex("78 56 34 12 EF CD AB 90")).splitlines()
+        self.assertEqual(len(words), ROM_WORD_COUNT)
+        self.assertEqual(words[:2], ["12345678", "90ABCDEF"])
+        self.assertEqual(set(words[2:]), {"00000000"})
 
     def test_rejects_non_word_sized_input(self) -> None:
         with self.assertRaisesRegex(ValueError, "divisible"):

@@ -4,7 +4,7 @@ Mini Computer is a mixed hardware/software implementation of a compact, custom 3
 
 ## Project status
 
-The complete Mini32 v0.1 C++ reference CPU, Python assembler/disassembler, and synthesizable CPU/ROM/RAM/MMIO RTL are implemented and tested together. GPIO and a deterministic Timer join UART and Debug as architecturally visible peripherals. A vendor-independent FPGA platform layer now adds reset synchronization, a buffered physical 8N1 UART TX pin, and a generic wrapper without selecting a board. The Timer counts successfully retired Mini32 instructions rather than wall-clock or FPGA cycles, allowing exact C++ ↔ RTL differential verification of its state.
+The complete Mini32 v0.1 C++ reference CPU, Python assembler/disassembler, and synthesizable CPU/ROM/RAM/MMIO RTL are implemented and tested together. GPIO and a deterministic Timer join UART and Debug as architecturally visible peripherals. A vendor-independent FPGA platform layer adds reset synchronization and a buffered physical 8N1 UART TX pin. The first board target is the Sipeed Tang Nano 20K, with its own edge wrapper, Gowin constraints/project, and UART/LED bring-up image. The Timer counts successfully retired Mini32 instructions rather than wall-clock or FPGA cycles, allowing exact C++ ↔ RTL differential verification of its state.
 
 ## Design choices
 
@@ -53,6 +53,8 @@ The RTL image flow is `programs/*.asm → assembler → raw .bin → rtl/tools/b
 
 `mini32_fpga_platform` is the vendor-independent physical wrapper: it synchronizes an external active-low reset, queues the architectural UART byte events, and serializes them onto a one-bit 8N1 `uart_tx` signal. Its `CLOCK_HZ`, `UART_BAUD`, and FIFO-depth parameters are board-agnostic defaults. GPIO remains separate input/output/direction signals until a board wrapper maps pins. See [FPGA platform](docs/fpga-platform.md).
 
+The selected board target is the [Sipeed Tang Nano 20K](docs/tang-nano-20k.md). Its wrapper keeps clock, reset/button polarity, UART pin, active-low LEDs, constraints, and Gowin project configuration outside the generic RTL.
+
 ### Toolchain
 
 `assembler/` contains the Python assembler and disassembler used to produce the same ROM images for C++ and, later, RTL simulation.
@@ -64,6 +66,7 @@ Mini32
 ├── assembler/   Python assembler and disassembler
 ├── simulator/   C++ golden reference model
 ├── rtl/         SystemVerilog hardware implementation
+├── fpga/        board-specific wrappers, constraints, and FPGA projects
 ├── programs/    shared guest-program inputs
 ├── tests/       C++ and Python regression tests
 └── docs/        architectural and verification contracts
@@ -74,6 +77,7 @@ Mini32
 - `programs/` — assembly integration programs.
 - `tests/` — unit and end-to-end regression tests.
 - `rtl/` — synthesizable SystemVerilog hardware modules and module-level testbenches.
+- `fpga/` — isolated board/vendor integration; currently the Tang Nano 20K target.
 - `firmware/stm32/` — later STM32 peripheral-controller firmware.
 - `docs/` — architecture contracts that implementation must follow.
 
@@ -88,7 +92,8 @@ Mini32
 7. Complete — synthesizable UART/Debug MMIO RTL and peripheral-state differential checks.
 8. Complete — GPIO MMIO and deterministic retired-instruction Timer MMIO.
 9. Complete — physical UART TX serializer, platform FIFO, reset synchronizer, generic FPGA wrapper, and Linux CI.
-10. Next — select an FPGA board, then add only its top-level pin mapping, clock/reset parameters, constraints, synthesis flow, and physical UART/GPIO demonstration.
-11. Stretch — STM32 bridge, Raspberry Pi host-tooling enhancements, and a future RV32I implementation.
+10. Complete — Tang Nano 20K top-level pin mapping, 27 MHz clock/reset adaptation, constraints, Gowin project, and simulated UART/GPIO/LED bring-up.
+11. Next — run the first Gowin synthesis/place-and-route and physically validate the Tang Nano 20K target; preserve the 64 KiB ROM/RAM architecture and use SDRAM only if the resource report requires it.
+12. Stretch — STM32 bridge, Raspberry Pi host-tooling enhancements, and a future RV32I implementation.
 
 The STM32 bridge remains a later physical-integration milestone. A Raspberry Pi 5 remains useful as the development and debug host, but does not replace the FPGA logic.

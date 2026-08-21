@@ -1,4 +1,4 @@
-"""Convert a raw little-endian Mini32 image to one word-per-line .memh."""
+"""Convert a raw little-endian Mini32 image to a full-size ROM .memh."""
 
 from __future__ import annotations
 
@@ -6,16 +6,19 @@ import argparse
 from pathlib import Path
 
 ROM_SIZE_BYTES = 64 * 1024
+ROM_WORD_COUNT = ROM_SIZE_BYTES // 4
 
 
 def convert_image(raw_image: bytes) -> str:
-    """Return uppercase 32-bit hexadecimal words for a raw little-endian image."""
+    """Return a zero-padded 64 KiB image as uppercase 32-bit hex words."""
     if len(raw_image) % 4:
         raise ValueError("input size must be divisible by 4 bytes")
     if len(raw_image) > ROM_SIZE_BYTES:
         raise ValueError("input image exceeds the 64 KiB Mini32 ROM capacity")
-    return "".join(f"{int.from_bytes(raw_image[offset:offset + 4], 'little'):08X}\n"
-                   for offset in range(0, len(raw_image), 4))
+    words = [f"{int.from_bytes(raw_image[offset:offset + 4], 'little'):08X}\n"
+             for offset in range(0, len(raw_image), 4)]
+    words.extend("00000000\n" for _ in range(ROM_WORD_COUNT - len(words)))
+    return "".join(words)
 
 
 def main(argv: list[str] | None = None) -> int:
