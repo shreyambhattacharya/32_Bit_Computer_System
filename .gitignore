@@ -2,6 +2,7 @@
 /rtl/build/
 /verification/build/
 /fpga/tang_nano_20k/rom/*.bin
+/fpga/tang_nano_20k/impl/
 /.cache/
 *.user
 *.suo

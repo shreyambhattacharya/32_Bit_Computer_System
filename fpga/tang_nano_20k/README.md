@@ -12,8 +12,10 @@ the project, verify `tang_nano_20k_top` is selected as the top module, and run
 Synthesis followed by Place & Route. The project includes
 the complete Mini32 source hierarchy, board constraints, the 27 MHz SDC, and
 `rom/fpga_bringup.memh`. SystemVerilog is used for both the board top and the
-generic RTL. Gowin EDA is not installed in the development environment, so no
-synthesis, place-and-route, timing, or bitstream result is claimed here.
+generic RTL. Manual Gowin synthesis and place-and-route passed for the complete
+design. The post-route timing report shows 68.976 MHz Fmax with zero setup and
+hold total negative slack against the 27 MHz constraint. See
+`reports/implementation_summary.md` for the source-controlled result summary.
 
 Regenerate the deliberate board ROM image from the checked-in program with:
 
@@ -22,11 +24,10 @@ python assembler/assembler.py programs/fpga_bringup.asm -o fpga/tang_nano_20k/ro
 python rtl/tools/bin_to_mem.py fpga/tang_nano_20k/rom/fpga_bringup.bin fpga/tang_nano_20k/rom/fpga_bringup.memh
 ```
 
-The intermediate `.bin` is ignored and should not be committed. In Gowin, run
-Synthesis, Place & Route, and timing analysis before generating a bitstream.
-The board's BL616 debugger supports volatile SRAM programming for bring-up and
-external flash programming for persistent boot; neither operation has been
-performed from this environment.
+The intermediate `.bin` and Gowin-generated `impl/` directory are ignored and
+should not be committed. The board's BL616 debugger supports volatile SRAM
+programming for bring-up and external flash programming for persistent boot;
+neither operation has been physically performed or validated yet.
 
 Run the board-adapter simulation from `rtl/` with:
 

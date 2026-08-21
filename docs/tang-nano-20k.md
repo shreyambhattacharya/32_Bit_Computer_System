@@ -63,19 +63,60 @@ no Gowin primitives. The validated Windows flow uses Icarus Verilog 13; the
 older Windows Icarus 11 build crashes while elaborating this full platform
 even though the same RTL passes with version 13.
 
-## Gowin build and memory status
+## Gowin implementation validation
 
-The checked-in `tang_nano_20k.gprj`, `.cst`, and `.sdc` are source/configuration
-inputs for Gowin EDA. The project selects `GW2AR-18C`, includes the complete
-64 KiB ROM and 64 KiB RAM Mini32 hierarchy, and constrains the nominal 27 MHz
-clock with a 37.037 ns period. Gowin EDA is not installed in this environment,
-so synthesis, place-and-route, timing, resource utilization, and bitstream
-generation have not been run or claimed. The key open resource question is
-that the full 128 KiB architectural memories contain 1,024 Kbit while the
-device advertises 828 Kbit BSRAM; this milestone intentionally preserves the
-architecture and defers any SDRAM decision until a real synthesis report.
+### Verified by Gowin synthesis and place-and-route
 
-No board has been physically programmed or validated. Future programming can
-use BL616-assisted volatile SRAM programming for bring-up or external flash
-programming for persistent boot. A generated `.fs` file alone would not prove
-hardware success.
+The checked-in `tang_nano_20k.gprj`, `.cst`, and `.sdc` select `GW2AR-18C`,
+include the complete 64 KiB ROM and 64 KiB RAM Mini32 hierarchy, and constrain
+`clk_27M` to 27.000 MHz with a 37.037 ns period. A manual Gowin FPGA Designer
+run successfully completed synthesis, place-and-route, and post-route timing
+analysis for `GW2AR-LV18QN88C8/I7`.
+
+Synthesis resource utilization:
+
+| Resource | Used / available | Utilization |
+| --- | ---: | ---: |
+| Logic | 3910 / 20736 | 19% |
+| LUT | 3652 | — |
+| ALU | 258 | — |
+| Registers | 1628 / 15750 | 11% |
+| Registers as latches | 0 / 15750 | 0% |
+| Registers as flip-flops | 1628 / 15750 | 11% |
+| BSRAM | 34 / 46 | 74% |
+
+Post-place-and-route timing:
+
+| Measurement | Result |
+| --- | ---: |
+| Clock constraint | 27.000 MHz |
+| Clock period | 37.037 ns |
+| Actual Fmax | 68.976 MHz |
+| Logic level | 6 |
+| Setup total negative slack | 0.000 |
+| Setup failing endpoints | 0 |
+| Hold total negative slack | 0.000 |
+| Hold failing endpoints | 0 |
+
+Synthesis passed, the design fits, place-and-route passed, and the design is
+timing-clean at the required 27 MHz board clock. A concise source-controlled
+record is available in `fpga/tang_nano_20k/reports/implementation_summary.md`.
+Generated Gowin implementation databases, reports, and bitstreams remain local
+build artifacts and are not source controlled.
+
+### Memory conclusion: fits comfortably
+
+The earlier internal-memory-capacity concern is resolved empirically. The
+complete, unchanged Mini32 v0.1 memory architecture—64 KiB ROM plus 64 KiB
+RAM—uses 34 of the device's 46 BSRAM blocks (74%). Mini32 v0.1 therefore does
+not require an SDRAM backend to fit on the Tang Nano 20K. The address map and
+architectural memory sizes remain unchanged.
+
+### Not yet physically verified on board
+
+The Tang Nano 20K has not yet been programmed or physically tested. The next
+milestone is to verify S1 reset behavior, the `Mini32 Tang Nano 20K` message at
+115200 8N1, GPIO LEDs, the HALT status LED, and the fault/UART-overflow LED on
+real hardware. Future programming can use BL616-assisted volatile SRAM mode
+for bring-up or external flash mode for persistent boot. A generated `.fs`
+file alone does not establish physical success.

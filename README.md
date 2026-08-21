@@ -4,7 +4,7 @@ Mini Computer is a mixed hardware/software implementation of a compact, custom 3
 
 ## Project status
 
-The complete Mini32 v0.1 C++ reference CPU, Python assembler/disassembler, and synthesizable CPU/ROM/RAM/MMIO RTL are implemented and tested together. GPIO and a deterministic Timer join UART and Debug as architecturally visible peripherals. A vendor-independent FPGA platform layer adds reset synchronization and a buffered physical 8N1 UART TX pin. The first board target is the Sipeed Tang Nano 20K, with its own edge wrapper, Gowin constraints/project, and UART/LED bring-up image. The Timer counts successfully retired Mini32 instructions rather than wall-clock or FPGA cycles, allowing exact C++ ↔ RTL differential verification of its state.
+The complete Mini32 v0.1 C++ reference CPU, Python assembler/disassembler, and synthesizable CPU/ROM/RAM/MMIO RTL are implemented and tested together. GPIO and a deterministic Timer join UART and Debug as architecturally visible peripherals. A vendor-independent FPGA platform layer adds reset synchronization and a buffered physical 8N1 UART TX pin. The Sipeed Tang Nano 20K target now has its board wrapper, constraints, Gowin project, and UART/LED bring-up image, and the complete design has passed Gowin synthesis, place-and-route, resource validation, and timing closure at 27 MHz. Post-route Fmax is 68.976 MHz. Physical board programming and validation remain the next milestone. The Timer counts successfully retired Mini32 instructions rather than wall-clock or FPGA cycles, allowing exact C++ ↔ RTL differential verification of its state.
 
 ## Design choices
 
@@ -92,8 +92,8 @@ Mini32
 7. Complete — synthesizable UART/Debug MMIO RTL and peripheral-state differential checks.
 8. Complete — GPIO MMIO and deterministic retired-instruction Timer MMIO.
 9. Complete — physical UART TX serializer, platform FIFO, reset synchronizer, generic FPGA wrapper, and Linux CI.
-10. Complete — Tang Nano 20K top-level pin mapping, 27 MHz clock/reset adaptation, constraints, Gowin project, and simulated UART/GPIO/LED bring-up.
-11. Next — run the first Gowin synthesis/place-and-route and physically validate the Tang Nano 20K target; preserve the 64 KiB ROM/RAM architecture and use SDRAM only if the resource report requires it.
-12. Stretch — STM32 bridge, Raspberry Pi host-tooling enhancements, and a future RV32I implementation.
+10. Complete — Tang Nano 20K board target, pin mapping, 27 MHz clock/reset adaptation, constraints, Gowin synthesis and place-and-route, resource validation, 68.976 MHz post-route Fmax, and timing closure at 27 MHz.
+11. Next — program the physical Tang Nano 20K and validate S1 reset, 115200 8N1 UART output, GPIO LEDs, the HALT LED, and fault/UART-overflow indication.
+12. Stretch/future — UART RX, interrupts, optional SDRAM expansion, STM32 bridge, Raspberry Pi host-tooling enhancements, and a future RISC-V extension.
 
-The STM32 bridge remains a later physical-integration milestone. A Raspberry Pi 5 remains useful as the development and debug host, but does not replace the FPGA logic.
+The current 64 KiB ROM plus 64 KiB RAM implementation fits using 34 of 46 BSRAM blocks, so Mini32 v0.1 does not require SDRAM. The STM32 bridge remains a later physical-integration milestone. A Raspberry Pi 5 remains useful as the development and debug host, but does not replace the FPGA logic.
