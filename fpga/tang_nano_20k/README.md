@@ -17,6 +17,32 @@ design. The post-route timing report shows 68.976 MHz Fmax with zero setup and
 hold total negative slack against the 27 MHz constraint. See
 `reports/implementation_summary.md` for the source-controlled result summary.
 
+### Gowin language configuration
+
+Before RTL analysis or synthesis, configure the project to parse the `.sv`
+sources as **System Verilog 2017**:
+
+```text
+Project
+  -> Configuration
+  -> Synthesize
+  -> General
+  -> Verilog Language
+  -> System Verilog 2017
+```
+
+Also verify that `tang_nano_20k_top` is selected as the top module. If the
+language remains plain Verilog, errors reporting unknown `logic`, `package`,
+`always_comb`, or package-qualified types are parser-mode failures rather than
+Mini32 RTL failures.
+
+The Gowin version used for the validated build stores these selections in the
+generated, ignored `impl/tang_nano_20k_process_config.json` metadata as
+`Vlg_Std_Sysv2017` and `tang_nano_20k_top`. They are not represented by a
+documented option in the checked-in `.gprj`, so every fresh project checkout
+must verify the two GUI settings above. The `.sv` entries remain the
+Gowin-generated/supported `type="file.verilog"` form.
+
 Regenerate the deliberate board ROM image from the checked-in program with:
 
 ```powershell

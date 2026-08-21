@@ -2,7 +2,7 @@ name: Mini32 regression
 
 on:
   push:
-    branches: [master, feature/fpga-platform]
+    branches: [master, feature/fpga-platform, feature/tang-nano-20k]
   pull_request:
     branches: [master]
 

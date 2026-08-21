@@ -73,6 +73,14 @@ include the complete 64 KiB ROM and 64 KiB RAM Mini32 hierarchy, and constrain
 run successfully completed synthesis, place-and-route, and post-route timing
 analysis for `GW2AR-LV18QN88C8/I7`.
 
+For a fresh Gowin project checkout, select `tang_nano_20k_top` as the top
+module and set **Project -> Configuration -> Synthesize -> General -> Verilog
+Language -> System Verilog 2017** before RTL analysis. Plain Verilog mode
+produces expected parser errors for `logic`, `package`, `always_comb`, and
+package-qualified types; those messages do not indicate an RTL design defect.
+The validated Gowin version records this setting only in generated `impl/`
+metadata, which is intentionally not source controlled.
+
 Synthesis resource utilization:
 
 | Resource | Used / available | Utilization |
