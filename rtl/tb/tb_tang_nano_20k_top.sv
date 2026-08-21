@@ -78,15 +78,15 @@ module tb_tang_nano_20k_top;
         if (uart_tx !== 1'b1) $fatal(1, "Tang UART TX did not return idle");
 
         // Isolate the edge adapter from the CPU to verify direction gating.
-        force dut.gpio_output[0] = 1'b1;
-        force dut.gpio_direction[0] = 1'b0;
+        force dut.gpio_output = 32'h0000_0001;
+        force dut.gpio_direction = 32'h0000_0000;
         #1;
         if (led[0] !== 1'b1) $fatal(1, "GPIO input direction did not leave LED0 off");
-        force dut.gpio_direction[0] = 1'b1;
+        force dut.gpio_direction = 32'h0000_0001;
         #1;
         if (led[0] !== 1'b0) $fatal(1, "GPIO output direction did not illuminate LED0");
-        release dut.gpio_output[0];
-        release dut.gpio_direction[0];
+        release dut.gpio_output;
+        release dut.gpio_direction;
 
         force dut.faulted = 1'b1;
         #1;
