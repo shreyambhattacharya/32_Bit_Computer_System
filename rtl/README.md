@@ -13,6 +13,13 @@ make test    # Icarus SystemVerilog self-checking testbenches
 make clean
 ```
 
+`make test` runs the generic/component/platform benches and then reports the
+Tang Nano 20K board-wrapper test separately. That wrapper test requires Icarus
+Verilog 13 or newer; the known Windows Icarus 11 executable crashes during
+elaboration. On an older executable, use `make tb_tang_nano_20k_top` only after
+installing a supported Icarus version; the Makefile stops before compilation
+and reports the incompatibility.
+
 Generated simulator outputs stay in `rtl/build/`. The root CMake project deliberately does not compile RTL; it continues to build the C++ golden model and software tests.
 
 `cpu_core.sv` uses a valid/ready bus interface. When `bus_valid` is asserted, `bus_access`, `bus_addr`, and `bus_wdata` remain stable until `system_bus.sv` raises `bus_ready`. `BUS_FETCH` distinguishes instruction fetches from data reads so execute permission can be enforced. A ready response carries `bus_rdata` and `bus_fault`; CPU logic remains separate from ROM, RAM, bus, and peripherals.

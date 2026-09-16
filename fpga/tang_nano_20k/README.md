@@ -12,9 +12,10 @@ the project, verify `tang_nano_20k_top` is selected as the top module, and run
 Synthesis followed by Place & Route. The project includes
 the complete Mini32 source hierarchy, board constraints, the 27 MHz SDC, and
 `rom/fpga_bringup.memh`. SystemVerilog is used for both the board top and the
-generic RTL. Manual Gowin synthesis and place-and-route passed for the complete
-design. The post-route timing report shows 68.976 MHz Fmax with zero setup and
-hold total negative slack against the 27 MHz constraint. See
+generic RTL. A prior manual Gowin synthesis and place-and-route passed for the
+complete design. The post-route timing report shows 68.976 MHz Fmax with zero
+setup and hold total negative slack against the 27 MHz constraint. A fresh
+Gowin run is still required for the current checkout. See
 `reports/implementation_summary.md` for the source-controlled result summary.
 
 ### Gowin language configuration
@@ -48,6 +49,7 @@ Regenerate the deliberate board ROM image from the checked-in program with:
 ```powershell
 python assembler/assembler.py programs/fpga_bringup.asm -o fpga/tang_nano_20k/rom/fpga_bringup.bin
 python rtl/tools/bin_to_mem.py fpga/tang_nano_20k/rom/fpga_bringup.bin fpga/tang_nano_20k/rom/fpga_bringup.memh
+python fpga/tang_nano_20k/tools/check_bringup_rom.py
 ```
 
 The intermediate `.bin` and Gowin-generated `impl/` directory are ignored and
@@ -65,6 +67,16 @@ On Windows, use Icarus Verilog 13 or newer for this full-platform test. If an
 older `iverilog` appears earlier on `PATH`, use the Makefile's `IVERILOG` and
 `VVP` overrides for the current shell. This requirement is limited to the
 simulation tool; no machine-specific tool path is stored in the project.
+
+The current host's Icarus 11.0 executable crashes during elaboration when the
+board wrapper is instantiated (Windows access violation before simulation).
+The generic platform and component benches still pass under that executable;
+this is a simulator limitation, not physical-board evidence. The prior
+Icarus 13 board-wrapper result remains the supported board-simulation baseline.
+
+For the physical experiment, follow [BRINGUP.md](BRINGUP.md). It includes the
+volatile SRAM programming sequence, serial settings, expected LED vector, and
+the optional `capture_bringup.py` validator.
 
 ## Expected bring-up
 

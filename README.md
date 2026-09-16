@@ -4,7 +4,7 @@ Mini Computer is a mixed hardware/software implementation of a compact, custom 3
 
 ## Project status
 
-The complete Mini32 v0.1 C++ reference CPU, Python assembler/disassembler, and synthesizable CPU/ROM/RAM/MMIO RTL are implemented and tested together. GPIO and a deterministic Timer join UART and Debug as architecturally visible peripherals. A vendor-independent FPGA platform layer adds reset synchronization and a buffered physical 8N1 UART TX pin. The Sipeed Tang Nano 20K target now has its board wrapper, constraints, Gowin project, and UART/LED bring-up image, and the complete design has passed Gowin synthesis, place-and-route, resource validation, and timing closure at 27 MHz. Post-route Fmax is 68.976 MHz. Physical board programming and validation remain the next milestone. The Timer counts successfully retired Mini32 instructions rather than wall-clock or FPGA cycles, allowing exact C++ ↔ RTL differential verification of its state.
+The complete Mini32 v0.1 C++ reference CPU, Python assembler/disassembler, and synthesizable CPU/ROM/RAM/MMIO RTL are implemented and tested together. GPIO and a deterministic Timer join UART and Debug as architecturally visible peripherals. A vendor-independent FPGA platform layer adds reset synchronization and a buffered physical 8N1 UART TX pin. The Sipeed Tang Nano 20K target has its board wrapper, constraints, Gowin project, UART/LED bring-up image, and executable [physical bring-up guide](fpga/tang_nano_20k/BRINGUP.md). The previously recorded Gowin synthesis/place-and-route result closes timing at 27 MHz with a 68.976 MHz post-route Fmax; it remains a prior implementation measurement until a fresh Gowin run is available. The Timer counts successfully retired Mini32 instructions rather than wall-clock or FPGA cycles, allowing exact C++ ↔ RTL differential verification of its state.
 
 ## Design choices
 
@@ -53,6 +53,10 @@ The RTL image flow is `programs/*.asm → assembler → raw .bin → rtl/tools/b
 
 `mini32_fpga_platform` is the vendor-independent physical wrapper: it synchronizes an external active-low reset, queues the architectural UART byte events, and serializes them onto a one-bit 8N1 `uart_tx` signal. Its `CLOCK_HZ`, `UART_BAUD`, and FIFO-depth parameters are board-agnostic defaults. GPIO remains separate input/output/direction signals until a board wrapper maps pins. See [FPGA platform](docs/fpga-platform.md).
 
+On Windows, the current Icarus 11.0 executable can run the generic RTL benches
+but crashes during elaboration of the nested Tang board wrapper. Use Icarus 13
+or newer for `tb_tang_nano_20k_top`; see the [Tang bring-up guide](fpga/tang_nano_20k/BRINGUP.md).
+
 The selected board target is the [Sipeed Tang Nano 20K](docs/tang-nano-20k.md). Its wrapper keeps clock, reset/button polarity, UART pin, active-low LEDs, constraints, and Gowin project configuration outside the generic RTL.
 
 ### Toolchain
@@ -92,7 +96,7 @@ Mini32
 7. Complete — synthesizable UART/Debug MMIO RTL and peripheral-state differential checks.
 8. Complete — GPIO MMIO and deterministic retired-instruction Timer MMIO.
 9. Complete — physical UART TX serializer, platform FIFO, reset synchronizer, generic FPGA wrapper, and Linux CI.
-10. Complete — Tang Nano 20K board target, pin mapping, 27 MHz clock/reset adaptation, constraints, Gowin synthesis and place-and-route, resource validation, 68.976 MHz post-route Fmax, and timing closure at 27 MHz.
+10. Complete (prior recorded run) — Tang Nano 20K board target, pin mapping, 27 MHz clock/reset adaptation, constraints, Gowin synthesis and place-and-route, resource validation, 68.976 MHz post-route Fmax, and timing closure at 27 MHz.
 11. Next — program the physical Tang Nano 20K and validate S1 reset, 115200 8N1 UART output, GPIO LEDs, the HALT LED, and fault/UART-overflow indication.
 12. Stretch/future — UART RX, interrupts, optional SDRAM expansion, STM32 bridge, Raspberry Pi host-tooling enhancements, and a future RISC-V extension.
 

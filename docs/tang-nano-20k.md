@@ -59,9 +59,13 @@ deliberate ROM image is `fpga/tang_nano_20k/rom/fpga_bringup.memh`.
 `rtl/tb/tb_tang_nano_20k_top.sv` tests the board wrapper with the real ROM
 image: reset-button polarity, active-low LED behavior, direction-qualified
 GPIO LEDs, UART pin output, halt LED, and fault/overflow LED behavior. It uses
-no Gowin primitives. The validated Windows flow uses Icarus Verilog 13; the
-older Windows Icarus 11 build crashes while elaborating this full platform
-even though the same RTL passes with version 13.
+no Gowin primitives. The supported board-wrapper baseline is Icarus Verilog 13
+or newer. On the current Windows host, Icarus 11.0 still crashes with a native
+access violation while elaborating the nested board wrapper, before simulation;
+the generic platform/component benches pass under Icarus 11. This confirms that
+the older "Icarus 13 required" note was not stale for this board-level test.
+
+The executable hardware procedure is [fpga/tang_nano_20k/BRINGUP.md](../fpga/tang_nano_20k/BRINGUP.md).
 
 ## Gowin implementation validation
 
